@@ -113,6 +113,7 @@ def parse_opts():
     g('shortcuts')
     k('quit', 'q', 'quit')
     k('quit', 'esc', 'quit')
+    k('confirm', 'enter', 'confirm')
     k('left', 'left', 'move left')
     k('right', 'right', 'move right')
     k('up', 'up', 'move up')
@@ -127,7 +128,6 @@ def parse_opts():
     k('column select right', 'alt+right', 'select columnar right')
     k('column select up', 'alt+up', 'select columnar up')
     k('column select down', 'alt+down', 'select columnar down')
-    k('confirm', 'enter', 'confirm')
 
     g('colors')
     o('selection_foreground', '#FFFFFF', option_type=to_color)
