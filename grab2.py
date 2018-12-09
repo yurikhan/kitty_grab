@@ -17,9 +17,6 @@ from kittens.tui.handler import Handler
 from kittens.tui.loop import Loop
 
 
-STREAM, COLUMNAR = range(2)
-
-
 PositionBase = namedtuple('Position', ['x', 'y', 'top_line'])
 @total_ordering
 class Position(PositionBase):
@@ -35,6 +32,77 @@ class Position(PositionBase):
         return (self.line, self.x) < (other.line, other.x)
 
 
+class Region:
+    @staticmethod
+    def line_inside_region(current_line, start, end):
+        return False
+
+    @staticmethod
+    def line_outside_region(current_line, start, end):
+        return current_line < start.line or end.line < current_line
+
+    @staticmethod
+    def adjust(start, end):
+        return start, end
+
+    @staticmethod
+    def selection_in_line(current_line, start, end, maxx):
+        return None, None
+
+    @staticmethod
+    def lines_affected(start, end, line, dx, dy):
+        return {}
+
+
+class NoRegion(Region):
+    name = 'unselected'
+    uses_mark = False
+
+    @staticmethod
+    def line_outside_region(current_line, start, end):
+        return False
+
+
+class StreamRegion(Region):
+    name = 'stream'
+    uses_mark = True
+
+    @staticmethod
+    def line_inside_region(current_line, start, end):
+        return start.line < current_line < end.line
+
+    @staticmethod
+    def selection_in_line(current_line, start, end, maxx):
+        if StreamRegion.line_outside_region(current_line, start, end):
+            return None, None
+        return (start.x if current_line == start.line else 0,
+                end.x if current_line == end.line else maxx)
+
+    @staticmethod
+    def lines_affected(start, end, line, dx, dy):
+        return {line, line - dy}
+
+
+class ColumnarRegion(Region):
+    name = 'columnar'
+    uses_mark = True
+
+    @staticmethod
+    def adjust(start, end):
+        return (start._replace(x=min(start.x, end.x)),
+                end._replace(x=max(start.x, end.x)))
+
+    @staticmethod
+    def selection_in_line(current_line, start, end, maxx):
+        if ColumnarRegion.line_outside_region(current_line, start, end):
+            return None, None
+        return start.x, end.x
+
+    @staticmethod
+    def lines_affected(start, end, line, dx, dy):
+        return range(start.line, end.line + 1) if dx else {line, line - dy}
+
+
 def parse_opts():
     all_options = {}
     o, k, g, all_groups = option_func(all_options, {
@@ -45,20 +113,20 @@ def parse_opts():
     g('shortcuts')
     k('quit', 'q', 'quit')
     k('quit', 'esc', 'quit')
-    k('left', 'left', 'move_left')
-    k('right', 'right', 'move_right')
-    k('up', 'up', 'move_up')
-    k('down', 'down', 'move_down')
-    k('scroll up', 'ctrl+up', 'scroll_up')
-    k('scroll down', 'ctrl+down', 'scroll_down')
-    k('select left', 'shift+left', 'select_left')
-    k('select right', 'shift+right', 'select_right')
-    k('select up', 'shift+up', 'select_up')
-    k('select down', 'shift+down', 'select_down')
-    k('column select left', 'alt+left', 'select_col_left')
-    k('column select right', 'alt+right', 'select_col_right')
-    k('column select up', 'alt+up', 'select_col_up')
-    k('column select down', 'alt+down', 'select_col_down')
+    k('left', 'left', 'move left')
+    k('right', 'right', 'move right')
+    k('up', 'up', 'move up')
+    k('down', 'down', 'move down')
+    k('scroll up', 'ctrl+up', 'scroll up')
+    k('scroll down', 'ctrl+down', 'scroll down')
+    k('select left', 'shift+left', 'select stream left')
+    k('select right', 'shift+right', 'select stream right')
+    k('select up', 'shift+up', 'select stream up')
+    k('select down', 'shift+down', 'select stream down')
+    k('column select left', 'alt+left', 'select columnar left')
+    k('column select right', 'alt+right', 'select columnar right')
+    k('column select up', 'alt+up', 'select columnar up')
+    k('column select down', 'alt+down', 'select columnar down')
     k('confirm', 'enter', 'confirm')
 
     g('colors')
@@ -77,12 +145,30 @@ def parse_opts():
             action, *key_def = parse_kittens_key(val, args_funcs)
             result['key_definitions'][tuple(key_def)] = action
             return True
+        return False
 
     def parse_config(lines, check_keys=True):
         result = {'key_definitions': {}}
         parse_config_base(lines, defaults, type_map, special_handling,
-            result, check_keys=check_keys)
+                          result, check_keys=check_keys)
         return result
+
+    @func_with_args('move')
+    def move(func, direction):
+        assert direction.lower() in ['left', 'right', 'up', 'down']
+        return func, direction.lower()
+
+    @func_with_args('scroll')
+    def scroll(func, direction):
+        assert direction.lower() in ['up', 'down']
+        return func, direction.lower()
+
+    @func_with_args('select')
+    def select(func, args):
+        region_type, direction = args.split(' ', 1)
+        assert region_type.lower() in ['stream', 'columnar']
+        assert direction.lower() in ['left', 'right', 'up', 'down']
+        return func, (region_type.lower(), direction.lower())
 
     Options, defaults = init_config(config_lines(all_options), parse_config)
     configs = list(resolve_config('/etc/xdg/kitty/grab.conf',
@@ -103,33 +189,20 @@ class GrabHandler(Handler):
         self.lines = lines
         self.point = Position(args.x, args.y, args.top_line)
         self.mark = None
+        self.mark_type = NoRegion
         self.result = None
         for key_def, action in self.opts.key_definitions.items():
             self.add_shortcut(action, *key_def)
 
-    def _visible_lines(self, point, mark):
-        start, end = sorted([point, mark])
-        yield from range(
-            max(0, start.line - point.top_line),
-            min(self.screen_size.rows, end.line + 1 - point.top_line))
-
     def _start_end(self):
-        start, end = sorted([self.point, self.mark])
-        if self.mark_type == COLUMNAR:
-            start, end = (start._replace(x=min(start.x, end.x)),
-                          end._replace(x=max(start.x, end.x)))
-        return start, end
+        start, end = sorted([self.point, self.mark or self.point])
+        return self.mark_type.adjust(start, end)
 
-    def _draw_line(self, y):
-        current_line = y + self.point.top_line
+    def _draw_line(self, current_line):
+        y = current_line - self.point.top_line
         line = self.lines[current_line - 1]
         clear_eol = '\x1b[m\x1b[K'
         sgr0 = '\x1b[m'
-
-        if not self.mark:
-            self.cmd.set_cursor_position(0, y)
-            self.print('{}{}'.format(sgr0, line), end=clear_eol)
-            return
 
         plain = unstyled(line)
         selection_sgr = '\x1b[38{};48{}m'.format(
@@ -137,9 +210,8 @@ class GrabHandler(Handler):
             color_as_sgr(self.opts.selection_background))
         start, end = self._start_end()
 
-        if (start.line < current_line < end.line
-                and self.mark_type == STREAM):
-            # line fully in region
+        # anti-flicker optimization
+        if self.mark_type.line_inside_region(current_line, start, end):
             self.cmd.set_cursor_position(0, y)
             self.print('{}{}'.format(selection_sgr, plain),
                        end=clear_eol)
@@ -148,30 +220,38 @@ class GrabHandler(Handler):
         self.cmd.set_cursor_position(0, y)
         self.print('{}{}'.format(sgr0, line), end=clear_eol)
 
-        if current_line < start.line or end.line < current_line:
+        if self.mark_type.line_outside_region(current_line, start, end):
             return
 
-        start_x = start.x if (current_line == start.line
-                              or self.mark_type == COLUMNAR) else 0
         # XXX: len(plain) and plain[start_x:end_x]
         # should be replaced with width-aware functions
-        end_x = end.x if (current_line == end.line
-                          or self.mark_type == COLUMNAR) else len(plain)
+        start_x, end_x = self.mark_type.selection_in_line(
+            current_line, start, end, len(plain))
+        if start_x is None and end_x is None:
+            return
 
         self.cmd.set_cursor_position(start_x, y)
         self.print('{}{}'.format(selection_sgr, plain[start_x:end_x]),
                    end='')
 
     def _update(self):
+        self.cmd.set_window_title('Grab – {} {} {},{}+{} to {},{}+{}'.format(
+            self.args.title,
+            self.mark_type.name,
+            getattr(self.mark, 'x', None), getattr(self.mark, 'y', None),
+            getattr(self.mark, 'top_line', None),
+            self.point.x, self.point.y, self.point.top_line))
         self.cmd.set_cursor_position(self.point.x, self.point.y)
 
-    def _redraw_lines(self, *lines):
-        for y in lines:
-            self._draw_line(y)
+    def _redraw_lines(self, lines):
+        for line in lines:
+            self._draw_line(line)
         self._update()
 
     def _redraw(self):
-        self._redraw_lines(*range(self.screen_size.rows))
+        self._redraw_lines(range(
+            self.point.top_line,
+            self.point.top_line + self.screen_size.rows))
 
     def initialize(self):
         self.cmd.set_window_title('Grab – {}'.format(self.args.title))
@@ -197,133 +277,57 @@ class GrabHandler(Handler):
     def quit(self, *args):
         self.quit_loop(1)
 
-    def _unset_mark(self):
-        if self.mark:
-            self.mark = None
+    directions = {'left': (-1, 0),
+                  'right': (1, 0),
+                  'up': (0, -1),
+                  'down': (0, 1)}
+    region_types = {'stream': StreamRegion,
+                    'columnar': ColumnarRegion}
+
+    def _ensure_mark(self, mark_type=StreamRegion):
+        need_redraw = mark_type is not self.mark_type
+        self.mark_type = mark_type
+        self.mark = (self.mark or self.point) if mark_type.uses_mark else None
+        if need_redraw:
             self._redraw()
 
-    def _ensure_mark(self, mark_type=STREAM):
-        self.mark = self.mark or self.point
-        self.mark_type = mark_type
-
-    def move_left(self, *args):
-        self._unset_mark()
-        if self.point.x == 0:
+    def _scroll(self, dtop):
+        if not (0 < self.point.top_line + dtop
+                <= 1 + len(self.lines) - self.screen_size.rows):
             return
-        self.point = self.point.moved(-1)
-        self._update()
-
-    def move_right(self, *args):
-        self._unset_mark()
-        if self.point.x + 1 >= self.screen_size.cols:
-            return
-        self.point = self.point.moved(1)
-        self._update()
-
-    def move_up(self, *args):
-        self._unset_mark()
-        if self.point.y <= 0:
-            return self.scroll_up()
-        self.point = self.point.moved(0, -1)
-        self._update()
-
-    def move_down(self, *args):
-        self._unset_mark()
-        if self.point.y + 1 >= self.screen_size.rows:
-            return self.scroll_down()
-        self.point = self.point.moved(0, 1)
-        self._update()
-
-    def scroll_up(self, *args):
-        if self.point.top_line <= 1:
-            return
-        self.point = self.point.moved(dtop=-1)
+        self.point = self.point.moved(dtop=dtop)
         self._redraw()
 
-    def scroll_down(self, *args):
-        if self.point.top_line + self.screen_size.rows >= 1 + len(self.lines):
+    def scroll(self, direction):
+        self._scroll(dtop=self.directions[direction][1])
+
+    def _select(self, dx, dy, mark_type):
+        self._ensure_mark(mark_type)
+        if not 0 <= self.point.x + dx < self.screen_size.cols:
             return
-        self.point = self.point.moved(dtop=1)
-        self._redraw()
-
-    def select_left(self, *args):
-        self._ensure_mark()
-        if self.point.x == 0:
-            return
-        self.point = self.point.moved(-1)
-        self._redraw_lines(self.point.y)
-
-    def select_right(self, *args):
-        self._ensure_mark()
-        if self.point.x + 1 >= self.screen_size.cols: return
-        self.point = self.point.moved(1)
-        self._redraw_lines(self.point.y)
-
-    def select_up(self, *args):
-        self._ensure_mark()
-        if self.point.y <= 0:
-            self.scroll_up()
+        if not 0 <= self.point.y + dy < self.screen_size.rows:
+            self._scroll(dtop=dy)
         else:
-            self.point = self.point.moved(0, -1)
-        self._redraw_lines(self.point.y, self.point.y + 1)
+            self.point = self.point.moved(dx, dy)
+        self._redraw_lines(self.mark_type.lines_affected(
+            *self._start_end(), self.point.line, dx, dy))
 
-    def select_down(self, *args):
-        self._ensure_mark()
-        if self.point.y + 1 >= self.screen_size.rows:
-            self.scroll_down()
-        else:
-            self.point = self.point.moved(0, 1)
-        self._redraw_lines(self.point.y, self.point.y - 1)
+    def move(self, direction):
+        self._select(*self.directions[direction], NoRegion)
 
-    def select_col_left(self, *args):
-        self._ensure_mark(COLUMNAR)
-        if self.point.x == 0:
-            return
-        self.point = self.point.moved(-1)
-        self._redraw_lines(*self._visible_lines(self.point, self.mark))
-
-    def select_col_right(self, *args):
-        self._ensure_mark(COLUMNAR)
-        if self.point.x + 1 >= self.screen_size.cols: return
-        self.point = self.point.moved(1)
-        self._redraw_lines(*self._visible_lines(self.point, self.mark))
-
-    def select_col_up(self, *args):
-        self._ensure_mark(COLUMNAR)
-        if self.point.y <= 0:
-            self.scroll_up()
-        else:
-            self.point = self.point.moved(0, -1)
-        self._redraw_lines(self.point.y, self.point.y + 1)
-
-    def select_col_down(self, *args):
-        self._ensure_mark(COLUMNAR)
-        if self.point.y + 1 >= self.screen_size.rows:
-            self.scroll_down()
-        else:
-            self.point = self.point.moved(0, 1)
-        self._redraw_lines(self.point.y, self.point.y - 1)
+    def select(self, region_type, direction):
+        self._select(*self.directions[direction],
+                     self.region_types[region_type])
 
     def confirm(self, *args):
-        if not self.mark:
-            return
         start, end = self._start_end()
-
-        if self.mark_type == COLUMNAR:
-            self.result = {'copy': '\n'.join([
-                unstyled(l)[start.x:end.x]
-                for l in self.lines[start.line - 1 : end.line]])}
-            self.quit_loop(0)
-            return
-
-        if start.line == end.line:
-            self.result = {'copy': unstyled(self.lines[start.line - 1])[start.x:end.x]}
-            self.quit_loop(0)
-
         self.result = {'copy': '\n'.join(
-            [unstyled(self.lines[start.line - 1])[start.x:]] +
-            [unstyled(l) for l in self.lines[start.line : end.line - 2]] +
-            [unstyled(self.lines[end.line - 1])[:end.x]])}
+            plain[start_x:end_x]
+            for line in range(start.line, end.line + 1)
+            for plain in [unstyled(self.lines[line])]
+            for start_x, end_x in [self.mark_type.selection_in_line(
+                line, start, end, len(plain))]
+            if start_x is not None and end_x is not None)}
         self.quit_loop(0)
 
 
