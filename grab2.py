@@ -10,7 +10,8 @@ from kitty.conf.utils import (
     init_config, key_func, load_config, merge_dicts, parse_config_base,
     parse_kittens_key, resolve_config, to_color)
 from kitty.constants import config_dir
-from kitty.fast_data_types import set_clipboard_string
+from kitty.fast_data_types import (
+    set_clipboard_string, truncate_point_for_length, wcswidth)
 import kitty.key_encoding as kk
 from kitty.rgb import color_as_sgr
 from kittens.tui.handler import Handler
@@ -181,6 +182,13 @@ def unstyled(s):
     return re.sub(r'\x1b\[[0-9;:]*m', '', s)
 
 
+def string_slice(s, start_x, end_x):
+    prev_pos = truncate_point_for_length(s, start_x - 1) if start_x > 0 else None
+    start_pos = truncate_point_for_length(s, start_x)
+    end_pos = truncate_point_for_length(s, end_x - 1) + 1
+    return s[start_pos:end_pos], prev_pos == start_pos
+
+
 class GrabHandler(Handler):
     def __init__(self, args, opts, lines):
         super().__init__()
@@ -223,16 +231,14 @@ class GrabHandler(Handler):
         if self.mark_type.line_outside_region(current_line, start, end):
             return
 
-        # XXX: len(plain) and plain[start_x:end_x]
-        # should be replaced with width-aware functions
         start_x, end_x = self.mark_type.selection_in_line(
-            current_line, start, end, len(plain))
+            current_line, start, end, wcswidth(plain))
         if start_x is None and end_x is None:
             return
 
-        self.cmd.set_cursor_position(start_x, y)
-        self.print('{}{}'.format(selection_sgr, plain[start_x:end_x]),
-                   end='')
+        line_slice, half = string_slice(plain, start_x, end_x)
+        self.cmd.set_cursor_position(start_x - (1 if half else 0), y)
+        self.print('{}{}'.format(selection_sgr, line_slice), end='')
 
     def _update(self):
         self.cmd.set_window_title('Grab – {} {} {},{}+{} to {},{}+{}'.format(
@@ -322,12 +328,13 @@ class GrabHandler(Handler):
     def confirm(self, *args):
         start, end = self._start_end()
         self.result = {'copy': '\n'.join(
-            plain[start_x:end_x]
+            line_slice
             for line in range(start.line, end.line + 1)
-            for plain in [unstyled(self.lines[line])]
+            for plain in [unstyled(self.lines[line - 1])]
             for start_x, end_x in [self.mark_type.selection_in_line(
                 line, start, end, len(plain))]
-            if start_x is not None and end_x is not None)}
+            if start_x is not None and end_x is not None
+            for line_slice, _half in [string_slice(plain, start_x, end_x)])}
         self.quit_loop(0)
 
 
