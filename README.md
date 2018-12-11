@@ -11,6 +11,11 @@ However, it lacks a built-in way to select text using the keyboard.
 This project implements keyboard-driven text selection as a kitten.
 
 
+# Minimum requirements
+
+Kitty 0.13.0 or higher.
+
+
 # Installation and initial configuration
 
 * Put this project’s files into your Kitty configuration directory
