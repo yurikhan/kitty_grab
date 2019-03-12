@@ -154,6 +154,12 @@ def parse_opts():
                           result, check_keys=check_keys)
         return result
 
+    def merge_configs(defaults, vals):
+        return {k: (merge_dicts(v, vals.get(k, {}))
+                    if isinstance(v, dict)
+                    else vals.get(k, v))
+                for k, v in defaults.items()}
+
     @func_with_args('move')
     def move(func, direction):
         assert direction.lower() in ['left', 'right', 'up', 'down']
@@ -175,7 +181,7 @@ def parse_opts():
     configs = list(resolve_config('/etc/xdg/kitty/grab.conf',
                                   os.path.join(config_dir, 'grab.conf'),
                                   config_files_on_cmd_line=None))
-    return load_config(Options, defaults, parse_config, merge_dicts, *configs)
+    return load_config(Options, defaults, parse_config, merge_configs, *configs)
 
 
 def unstyled(s):
