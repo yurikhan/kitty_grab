@@ -19,7 +19,6 @@ from kittens.tui.loop import Loop
 
 
 PositionBase = namedtuple('Position', ['x', 'y', 'top_line'])
-@total_ordering
 class Position(PositionBase):
     """
     Coordinates of a cell.
@@ -42,8 +41,27 @@ class Position(PositionBase):
         return self._replace(x=self.x + dx, y=self.y + dy,
                              top_line=self.top_line + dtop)
 
+    def __str__(self):
+        return '{},{}+{}'.format(self.x, self.y, self.top_line)
+
     def __lt__(self, other):
         return (self.line, self.x) < (other.line, other.x)
+
+    def __le__(self, other):
+        return (self.line, self.x) <= (other.line, other.x)
+
+    def __gt__(self, other):
+        return (self.line, self.x) > (other.line, other.x)
+
+    def __ge__(self, other):
+        return (self.line, self.x) >= (other.line, other.x)
+
+    def __eq__(self, other):
+        return (self.line, self.x) == (other.line, other.x)
+
+    def __ne__(self, other):
+        return (self.line, self.x) != (other.line, other.x)
+
 
 
 class Region:
