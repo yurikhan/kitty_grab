@@ -32,6 +32,7 @@ ScreenLine = int
 ScreenColumn = int
 SelectionInLine = Union[Tuple[ScreenColumn, ScreenColumn],
                         Tuple[None, None]]
+Motion = Tuple[int, int, int]
 
 
 PositionBase = NamedTuple('Position', [
@@ -93,6 +94,9 @@ class Position(PositionBase):
         return (self.line, self.x) != (other.line, other.x)
 
 
+def _span(line: AbsoluteLine, *lines: AbsoluteLine) -> Set[AbsoluteLine]:
+    return set(range(min(line, *lines), max(line, *lines) + 1))
+
 
 class Region:
     name = None  # type: Optional[str]
@@ -135,13 +139,36 @@ class Region:
         return None, None
 
     @staticmethod
-    def lines_affected(start: Position, end: Position, line: AbsoluteLine,
-                       dx: int, dy: int) -> Set[AbsoluteLine]:
+    def lines_affected(mark: Optional[Position], old_point: Position,
+                       point: Position) -> Set[AbsoluteLine]:
         """
         Return the set of lines (1-based, top of scrollback, down)
-        that must be redrawn when point that is on `line` moves by dx, dy.
+        that must be redrawn when point moves from old_point.
         """
         return set()
+
+    @staticmethod
+    def page_up(mark: Optional[Position], point: Position,
+                rows: ScreenLine) -> Motion:
+        """
+        Return the movement page up from point.
+        """
+        if point.y > 0:                    # not top of window
+            return 0, -point.y, 0          # to top of window
+        return 0, 0, -min(rows - 1,        # nearly full page
+                          point.line - 1)  # or as much as possible
+
+    @staticmethod
+    def page_down(mark: Optional[Position], point: Position,
+                  rows: ScreenLine, lines: AbsoluteLine) -> Motion:
+        """
+        Return the movement page down from point.
+        """
+        maxy = rows - 1
+        if point.y < maxy:                    # not bottom of window
+            return 0, maxy - point.y, 0       # to bottom of window
+        return 0, 0, min(maxy,                # nearly full page
+                         lines - point.line)  # or as much as possible
 
 
 class NoRegion(Region):
@@ -154,9 +181,40 @@ class NoRegion(Region):
         return False
 
 
-class StreamRegion(Region):
-    name = 'stream'
+class MarkedRegion(Region):
     uses_mark = True
+
+    @staticmethod
+    def page_up(mark: Optional[Position], point: Position,
+                rows: ScreenLine) -> Motion:
+        assert mark is not None
+        if (point < mark or                               # extending
+                0 <= mark.line - point.top_line < rows):  # mark visible
+            return Region.page_up(mark, point, rows)
+        # Otherwise, mark is above the top of window and we are shrinking.
+        # Move to the topmost line that we can see
+        # and scroll as much as possible.
+        dtop = min(rows - 1, point.top_line - 1)
+        dy = point.y - dtop  # remainder
+        return 0, -dy, -dtop
+
+    @staticmethod
+    def page_down(mark: Optional[Position], point: Position,
+                  rows: ScreenLine, lines: AbsoluteLine) -> Motion:
+        assert mark is not None
+        if (point > mark or                               # extending
+                0 <= mark.line - point.top_line < rows):  # mark visible
+            return Region.page_down(mark, point, rows, lines)
+        # Otherwise, mark is below the bottom of window and we are shrinking.
+        # Move to the bottommost line that we can see
+        # and scroll as much as possible.
+        dtop = min(rows - 1, lines - rows + 1 - point.top_line)
+        dy = point.y + rows - 1 - dtop
+        return 0, dy, dtop
+
+
+class StreamRegion(MarkedRegion):
+    name = 'stream'
 
     @staticmethod
     def line_inside_region(current_line: AbsoluteLine,
@@ -173,14 +231,13 @@ class StreamRegion(Region):
                 end.x if current_line == end.line else maxx)
 
     @staticmethod
-    def lines_affected(start: Position, end: Position, line: AbsoluteLine,
-                       dx: int, dy: int) -> Set[AbsoluteLine]:
-        return {line, line - dy}
+    def lines_affected(mark: Optional[Position], old_point: Position,
+                       point: Position) -> Set[AbsoluteLine]:
+        return _span(old_point.line, point.line)
 
 
-class ColumnarRegion(Region):
+class ColumnarRegion(MarkedRegion):
     name = 'columnar'
-    uses_mark = True
 
     @staticmethod
     def adjust(start: Position, end: Position) -> Tuple[Position, Position]:
@@ -196,10 +253,23 @@ class ColumnarRegion(Region):
         return start.x, end.x
 
     @staticmethod
-    def lines_affected(start: Position, end: Position, line: AbsoluteLine,
-                       dx: int, dy: int) -> Set[AbsoluteLine]:
-        return (set(range(start.line, end.line + 1)) if dx
-                else {line, line - dy})
+    def lines_affected(mark: Optional[Position], old_point: Position,
+                       point: Position) -> Set[AbsoluteLine]:
+        assert mark is not None
+        # If column changes, all lines change.
+        if old_point.x != point.x:
+            return _span(mark.line, old_point.line, point.line)
+        # If point passes mark, all passed lines change except mark line.
+        if old_point < mark < point or point < mark < old_point:
+            return _span(old_point.line, point.line) - {mark.line}
+        # If point moves away from mark,
+        # all passed lines change except old point line.
+        elif mark < old_point < point or point < old_point < mark:
+            return _span(old_point.line, point.line) - {old_point.line}
+        # Otherwise, point moves toward mark,
+        # and all passed lines change except new point line.
+        else:
+            return _span(old_point.line, point.line) - {point.line}
 
 
 Options = Any  # dynamically created namespace class
@@ -223,16 +293,22 @@ def parse_opts() -> Options:
     k('right', 'right', 'move right')
     k('up', 'up', 'move up')
     k('down', 'down', 'move down')
+    k('page up', 'page_up', 'move page up')
+    k('page down', 'page_down', 'move page down')
     k('scroll up', 'ctrl+up', 'scroll up')
     k('scroll down', 'ctrl+down', 'scroll down')
     k('select left', 'shift+left', 'select stream left')
     k('select right', 'shift+right', 'select stream right')
     k('select up', 'shift+up', 'select stream up')
     k('select down', 'shift+down', 'select stream down')
+    k('select page up', 'shift+page_up', 'select stream page up')
+    k('select page down', 'shift+page_down', 'select stream page down')
     k('column select left', 'alt+left', 'select columnar left')
     k('column select right', 'alt+right', 'select columnar right')
     k('column select up', 'alt+up', 'select columnar up')
     k('column select down', 'alt+down', 'select columnar down')
+    k('column select page up', 'alt+page_up', 'select columnar page up')
+    k('column select page down', 'alt+page_down', 'select columnar page down')
 
     g('colors')
     o('selection_foreground', '#FFFFFF', option_type=to_color)
@@ -249,8 +325,9 @@ def parse_opts() -> Options:
 
     @func_with_args('move')
     def move(func: Callable, direction: str) -> Tuple[Callable, str]:
-        assert direction.lower() in ['left', 'right', 'up', 'down']
-        return func, direction.lower()
+        assert direction.lower() in ['left', 'right', 'up', 'down',
+                                     'page up', 'page down']
+        return func, direction.lower().replace(' ', '_')
 
     @func_with_args('scroll')
     def scroll(func: Callable, direction: str) -> Tuple[Callable, str]:
@@ -261,8 +338,9 @@ def parse_opts() -> Options:
     def select(func: Callable, args: str) -> Tuple[Callable, Tuple[str, str]]:
         region_type, direction = args.split(' ', 1)
         assert region_type.lower() in ['stream', 'columnar']
-        assert direction.lower() in ['left', 'right', 'up', 'down']
-        return func, (region_type.lower(), direction.lower())
+        assert direction.lower() in ['left', 'right', 'up', 'down',
+                                     'page up', 'page down']
+        return func, (region_type.lower(), direction.lower().replace(' ', '_'))
 
     # Configuration reader helpers
     def special_handling(key: OptionName, val: str,
@@ -408,10 +486,6 @@ class GrabHandler(Handler):
     def quit(self, *args: Any) -> None:
         self.quit_loop(1)
 
-    directions = {'left': (-1, 0),
-                  'right': (1, 0),
-                  'up': (0, -1),
-                  'down': (0, 1)}  # type: Dict[DirectionStr, Tuple[int, int]]
     region_types = {'stream': StreamRegion,
                     'columnar': ColumnarRegion
                    }  # type: Dict[RegionTypeStr, Type[Region]]
@@ -431,26 +505,46 @@ class GrabHandler(Handler):
         self._redraw()
 
     def scroll(self, direction: DirectionStr) -> None:
-        self._scroll(dtop=self.directions[direction][1])
+        self._scroll(dtop=getattr(self, direction)()[1])
 
-    def _select(self, dx: int, dy: int, mark_type: Type[Region]) -> None:
+    def left(self) -> Motion:
+        return (-1 if self.point.x > 0 else 0), 0, 0
+
+    def right(self) -> Motion:
+        return (1 if self.point.x + 1 < self.screen_size.cols else 0), 0, 0
+
+    def up(self) -> Motion:
+        return (0, -1, 0) if self.point.y > 0 else (0, 0, -1)
+
+    def down(self) -> Motion:
+        return ((0, 1, 0) if self.point.y + 1 < self.screen_size.rows
+                else (0, 0, 1))
+
+    def page_up(self) -> Motion:
+        return self.mark_type.page_up(self.mark, self.point,
+                                      self.screen_size.rows)
+
+    def page_down(self) -> Motion:
+        return self.mark_type.page_down(
+            self.mark, self.point, self.screen_size.rows,
+            max(self.screen_size.rows, len(self.lines)))
+
+    def _select(self, direction: DirectionStr,
+                mark_type: Type[Region]) -> None:
         self._ensure_mark(mark_type)
-        if not 0 <= self.point.x + dx < self.screen_size.cols:
-            return
-        if not 0 <= self.point.y + dy < self.screen_size.rows:
-            self._scroll(dtop=dy)
-        else:
-            self.point = self.point.moved(dx, dy)
+        dx, dy, dtop = (getattr(self, direction))()
+        self._scroll(dtop)
+        old_point = self.point
+        self.point = self.point.moved(dx, dy)
         self._redraw_lines(self.mark_type.lines_affected(
-            *self._start_end(), self.point.line, dx, dy))
+            self.mark, old_point, self.point))
 
     def move(self, direction: DirectionStr) -> None:
-        self._select(*self.directions[direction], NoRegion)
+        self._select(direction, NoRegion)
 
     def select(self, region_type: RegionTypeStr,
                direction: DirectionStr) -> None:
-        self._select(*self.directions[direction],
-                     self.region_types[region_type])
+        self._select(direction, self.region_types[region_type])
 
     def confirm(self, *args: Any) -> None:
         start, end = self._start_end()

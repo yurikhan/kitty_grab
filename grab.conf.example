@@ -20,10 +20,12 @@
 
 #: Copy the selected region to clipboard and exit.
 
-# map Left  move left
-# map Right move right
-# map Up    move up
-# map Down  move down
+# map Left      move left
+# map Right     move right
+# map Up        move up
+# map Down      move down
+# map Page_Up   move page up
+# map Page_Down move page down
 
 #: Cancel selection and move the cursor around the screen.
 #: This will scroll the buffer if needed and possible.
@@ -34,19 +36,23 @@
 #: Scroll the buffer, if possible.
 #: Cursor stays in the same position relative to the screen.
 
-# map Shift+Left  select stream left
-# map Shift+Right select stream right
-# map Shift+Up    select stream up
-# map Shift+Down  select stream down
+# map Shift+Left      select stream left
+# map Shift+Right     select stream right
+# map Shift+Up        select stream up
+# map Shift+Down      select stream down
+# map Shift+Page_Up   select stream page up
+# map Shift+Page_Down select stream page down
 
 #: Extend a stream selection.
 #: If no region is selected, start selecting.
 #: Stream selection includes all characters between the region ends.
 
-# map Alt+Left  select columnar left
-# map Alt+Right select columnar right
-# map Alt+Up    select columnar up
-# map Alt+Down  select columnar down
+# map Alt+Left      select columnar left
+# map Alt+Right     select columnar right
+# map Alt+Up        select columnar up
+# map Alt+Down      select columnar down
+# map Alt+Page_Up   select columnar page up
+# map Alt+Page_Down select columnar page down
 
 #: Extend a columnar selection.
 #: If no region is selected, start selecting.
