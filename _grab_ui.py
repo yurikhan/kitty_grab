@@ -21,11 +21,24 @@ from kittens.tui.loop import Loop
 PositionBase = namedtuple('Position', ['x', 'y', 'top_line'])
 @total_ordering
 class Position(PositionBase):
+    """
+    Coordinates of a cell.
+
+    :param x: 0-based, left of window, to the right
+    :param y: 0-based, top of window, down
+    :param top_line: 1-based, start of scrollback, down
+    """
     @property
     def line(self):
+        """
+        Return 1-based absolute line number.
+        """
         return self.y + self.top_line
 
     def moved(self, dx=0, dy=0, dtop=0):
+        """
+        Return a new position specified relative to self.
+        """
         return self._replace(x=self.x + dx, y=self.y + dy,
                              top_line=self.top_line + dtop)
 
@@ -36,22 +49,42 @@ class Position(PositionBase):
 class Region:
     @staticmethod
     def line_inside_region(current_line, start, end):
+        """
+        Return True if current_line is entirely inside the region
+        defined by start and end.
+        """
         return False
 
     @staticmethod
     def line_outside_region(current_line, start, end):
+        """
+        Return True if current_line is entirely outside the region
+        defined by start and end.
+        """
         return current_line < start.line or end.line < current_line
 
     @staticmethod
     def adjust(start, end):
+        """
+        Return the normalized pair of markers
+        equivalent to start and end. This is region-type-specific.
+        """
         return start, end
 
     @staticmethod
     def selection_in_line(current_line, start, end, maxx):
+        """
+        Return bounds of the part of current_line
+        that are within the region defined by start and end.
+        """
         return None, None
 
     @staticmethod
     def lines_affected(start, end, line, dx, dy):
+        """
+        Return the set of lines (1-based, top of scrollback, down)
+        that must be redrawn when point that is on `line` moves by dx, dy.
+        """
         return {}
 
 
