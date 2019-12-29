@@ -1,6 +1,8 @@
-import os
-
-import grab2
+try:
+    import grab2
+    grab2_path = grab2.__file__
+except (ImportError, AttributeError):
+    grab2_path = 'grab2.py'
 
 def main(args):
     pass
@@ -18,7 +20,6 @@ def handle_result(args, result, target_window_id, boss):
     content = content.replace('\r\n', '\n').replace('\r', '\n')
     n_lines = content.count('\n')
     top_line = (n_lines - (window.screen.lines - 1) - window.screen.scrolled_by)
-    grab2_path = os.path.abspath(grab2.__file__)
     boss._run_kitten(grab2_path, args=[
         '--title={}'.format(window.title),
         '--cursor-x={}'.format(window.screen.cursor.x),
