@@ -1,6 +1,6 @@
 import os
 
-import grab2
+import _grab_ui
 
 def main(args):
     pass
@@ -18,8 +18,7 @@ def handle_result(args, result, target_window_id, boss):
     content = content.replace('\r\n', '\n').replace('\r', '\n')
     n_lines = content.count('\n')
     top_line = (n_lines - (window.screen.lines - 1) - window.screen.scrolled_by)
-    grab2_path = os.path.abspath(grab2.__file__)
-    boss._run_kitten(grab2_path, args=[
+    boss._run_kitten(_grab_ui.__file__, args=[
         '--title={}'.format(window.title),
         '--cursor-x={}'.format(window.screen.cursor.x),
         '--cursor-y={}'.format(window.screen.cursor.y),

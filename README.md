@@ -18,13 +18,15 @@ Kitty 0.13.0 or higher.
 
 # Installation and initial configuration
 
-* Put this project’s files into your Kitty configuration directory
-  (`~/.config/kitty`).
+* Clone this repository into your Kitty configuration directory:
+
+      $ cd ~/.config/kitty
+      $ git clone https://github.com/yurikhan/kitty_grab.git
 
 * In the Kitty configuration file (`kitty.conf`),
-  map a key to run the `grab1.py` kitten:
+  map a key to run the `grab.py` kitten:
 
-      map Alt+Insert kitten grab1.py
+      map Alt+Insert kitten kitty_grab/grab.py
 
 * Restart Kitty.
 
