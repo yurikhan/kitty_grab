@@ -2,6 +2,7 @@ import os
 
 import _grab_ui
 
+
 def main(args):
     pass
 
@@ -27,4 +28,4 @@ def handle_result(args, result, target_window_id, boss):
         window=window)
 
 
-handle_result.no_ui = True
+setattr(handle_result, 'no_ui', True)
