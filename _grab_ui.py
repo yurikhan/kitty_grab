@@ -11,7 +11,7 @@ from kitty.conf.definition import (               # type: ignore
     Option, config_lines, option_func)
 from kitty.conf.utils import (                    # type: ignore
     init_config, key_func, load_config, merge_dicts, parse_config_base,
-    parse_kittens_key, resolve_config, to_color)
+    parse_kittens_key as _parse_kittens_key, resolve_config, to_color)
 from kitty.constants import config_dir            # type: ignore
 from kitty.fast_data_types import (               # type: ignore
     set_clipboard_string, truncate_point_for_length, wcswidth)
@@ -335,6 +335,10 @@ class ColumnarRegion(MarkedRegion):
             return _span(old_point.line, point.line) - {point.line}
 
 
+ActionName = str
+ActionArgs = tuple
+ShortcutMods = int
+KeyName = str
 Options = Any  # dynamically created namespace class
 OptionName = str
 OptionValues = Dict[OptionName, Any]
@@ -405,6 +409,12 @@ def parse_opts() -> Options:
                                      'page up', 'page down']
         return func, (region_type.lower(), direction.lower().replace(' ', '_'))
 
+    def parse_kittens_key(val: str, args_funcs: Dict[str, Callable]) -> Tuple[
+            Tuple[ActionName, ActionArgs], KeyName, ShortcutMods, bool]:
+        action, key, mods, is_text = _parse_kittens_key(val, args_funcs)
+        return (action, key, mods,
+                is_text and (0 == (mods or 0) & (kk.CTRL | kk.ALT | kk.SUPER)))
+
     # Configuration reader helpers
     def special_handling(key: OptionName, val: str,
                          result: OptionValues) -> bool:
@@ -448,8 +458,6 @@ def string_slice(s: str, start_x: ScreenColumn,
     return s[start_pos:end_pos], prev_pos == start_pos
 
 
-ActionName = str
-ActionArgs = tuple
 DirectionStr = str
 RegionTypeStr = str
 
