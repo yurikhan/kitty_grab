@@ -32,7 +32,6 @@ ScreenLine = int
 ScreenColumn = int
 SelectionInLine = Union[Tuple[ScreenColumn, ScreenColumn],
                         Tuple[None, None]]
-Motion = Tuple[int, int, int]
 
 
 PositionBase = NamedTuple('Position', [
@@ -59,6 +58,56 @@ class Position(PositionBase):
         """
         return self._replace(x=self.x + dx, y=self.y + dy,
                              top_line=self.top_line + dtop)
+
+    def scrolled(self, dtop: int = 0) -> 'Position':
+        """
+        Return a new position equivalent to self
+        but scrolled dtop lines.
+        """
+        return self.moved(dy=-dtop, dtop=dtop)
+
+    def scrolled_up(self, rows: ScreenLine) -> 'Position':
+        """
+        Return a new position equivalent to self
+        but with top_line as small as possible.
+        """
+        return self.scrolled(-min(self.top_line - 1,
+                                  rows - 1 - self.y))
+
+    def scrolled_down(self, rows: ScreenLine,
+                      lines: AbsoluteLine) -> 'Position':
+        """
+        Return a new position equivalent to self
+        but with top_line as large as possible.
+        """
+        return self.scrolled(min(lines - rows + 1 - self.top_line,
+                                 self.y))
+
+    def scrolled_towards(self, other: 'Position', rows: ScreenLine,
+                         lines: Optional[AbsoluteLine] = None) -> 'Position':
+        """
+        Return a new position equivalent to self.
+        If self and other fit within a single screen,
+        scroll as little as possible to make both visible.
+        Otherwise, scroll as much as possible towards other.
+        """
+        #  @ 
+        #  .|   .    @|   .    .
+        # |.|  |.   |.|  |.   |.|
+        # |*|  |*|  |*|  |*|  |*|
+        # |.   |.|  |.   |.|  |@|
+        #  .    .|   .    @|   .
+        #       @
+        if other.line <= self.line - rows:         # above, unreachable
+            return self.scrolled_up(rows)
+        if other.line >= self.line + rows:         # below, unreachable
+            assert lines is not None
+            return self.scrolled_down(rows, lines)
+        if other.line < self.top_line:             # above, reachable
+            return self.scrolled(other.line - self.top_line)
+        if other.line > self.top_line + rows - 1:  # below, reachable
+            return self.scrolled(other.line - self.top_line - rows + 1)
+        return self                                # visible
 
     def __str__(self) -> str:
         return '{},{}+{}'.format(self.x, self.y, self.top_line)
@@ -149,26 +198,42 @@ class Region:
 
     @staticmethod
     def page_up(mark: Optional[Position], point: Position,
-                rows: ScreenLine) -> Motion:
+                rows: ScreenLine, lines: AbsoluteLine) -> Position:
         """
-        Return the movement page up from point.
+        Return the position page up from point.
         """
-        if point.y > 0:                    # not top of window
-            return 0, -point.y, 0          # to top of window
-        return 0, 0, -min(rows - 1,        # nearly full page
-                          point.line - 1)  # or as much as possible
+        #                          ........
+        #                          ....$...|
+        #  ........    ....$...|   ........|
+        # |....$...|  |....^...|  |....^...|
+        # |....^...|  |........|  |........
+        # |........|  |........   |........
+        #  ........    ........    ........
+        if point.y > 0:
+            return Position(point.x, 0, point.top_line)
+        assert point.y == 0
+        return Position(point.x, 0,
+                        max(1, point.top_line - rows + 1))
 
     @staticmethod
     def page_down(mark: Optional[Position], point: Position,
-                  rows: ScreenLine, lines: AbsoluteLine) -> Motion:
+                  rows: ScreenLine, lines: AbsoluteLine) -> Position:
         """
-        Return the movement page down from point.
+        Return the position page down from point.
         """
+        #  ........    ........    ........
+        # |........|  |........   |........
+        # |....^...|  |........|  |........
+        # |....$...|  |....^...|  |....^...|
+        #  ........    ....$...|   ........|
+        #                          ....$...|
+        #                          ........
         maxy = rows - 1
-        if point.y < maxy:                    # not bottom of window
-            return 0, maxy - point.y, 0       # to bottom of window
-        return 0, 0, min(maxy,                # nearly full page
-                         lines - point.line)  # or as much as possible
+        if point.y < maxy:
+            return Position(point.x, maxy, point.top_line)
+        assert point.y == maxy
+        return Position(point.x, maxy,
+                        min(lines - maxy, point.top_line + maxy))
 
 
 class NoRegion(Region):
@@ -184,33 +249,31 @@ class NoRegion(Region):
 class MarkedRegion(Region):
     uses_mark = True
 
+    # When a region is marked,
+    # override page up and down motion
+    # to keep as much region visible as possible.
+    #
+    # This means,
+    # after computing the position in the usual way,
+    # do the minimum possible scroll adjustment
+    # to bring both mark and point on screen.
+    # If that is not possible,
+    # do the maximum possible scroll adjustment
+    # towards mark
+    # that keeps point on screen.
     @staticmethod
     def page_up(mark: Optional[Position], point: Position,
-                rows: ScreenLine) -> Motion:
+                rows: ScreenLine, lines: AbsoluteLine) -> Position:
         assert mark is not None
-        if (point < mark or                               # extending
-                0 <= mark.line - point.top_line < rows):  # mark visible
-            return Region.page_up(mark, point, rows)
-        # Otherwise, mark is above the top of window and we are shrinking.
-        # Move to the topmost line that we can see
-        # and scroll as much as possible.
-        dtop = min(rows - 1, point.top_line - 1)
-        dy = point.y - dtop  # remainder
-        return 0, -dy, -dtop
+        return (Region.page_up(mark, point, rows, lines)
+                .scrolled_towards(mark, rows, lines))
 
     @staticmethod
     def page_down(mark: Optional[Position], point: Position,
-                  rows: ScreenLine, lines: AbsoluteLine) -> Motion:
+                  rows: ScreenLine, lines: AbsoluteLine) -> Position:
         assert mark is not None
-        if (point > mark or                               # extending
-                0 <= mark.line - point.top_line < rows):  # mark visible
-            return Region.page_down(mark, point, rows, lines)
-        # Otherwise, mark is below the bottom of window and we are shrinking.
-        # Move to the bottommost line that we can see
-        # and scroll as much as possible.
-        dtop = min(rows - 1, lines - rows + 1 - point.top_line)
-        dy = point.y + rows - 1 - dtop
-        return 0, dy, dtop
+        return (Region.page_down(mark, point, rows, lines)
+                .scrolled_towards(mark, rows, lines))
 
 
 class StreamRegion(MarkedRegion):
@@ -498,33 +561,42 @@ class GrabHandler(Handler):
             self._redraw()
 
     def _scroll(self, dtop: int) -> None:
-        if not (0 < self.point.top_line + dtop
-                <= 1 + len(self.lines) - self.screen_size.rows):
+        rows = self.screen_size.rows
+        new_point = self.point.moved(dtop=dtop)
+        if not (0 < new_point.top_line <= 1 + len(self.lines) - rows):
             return
-        self.point = self.point.moved(dtop=dtop)
+        self.point = new_point
         self._redraw()
 
     def scroll(self, direction: DirectionStr) -> None:
-        self._scroll(dtop=getattr(self, direction)()[1])
+        self._scroll(dtop={'up': -1, 'down': 1}[direction])
 
-    def left(self) -> Motion:
-        return (-1 if self.point.x > 0 else 0), 0, 0
+    def left(self) -> Position:
+        return self.point.moved(dx=-1) if self.point.x > 0 else self.point
 
-    def right(self) -> Motion:
-        return (1 if self.point.x + 1 < self.screen_size.cols else 0), 0, 0
+    def right(self) -> Position:
+        return (self.point.moved(dx=1)
+                if self.point.x + 1 < self.screen_size.cols
+                else self.point)
 
-    def up(self) -> Motion:
-        return (0, -1, 0) if self.point.y > 0 else (0, 0, -1)
+    def up(self) -> Position:
+        return (self.point.moved(dy=-1) if self.point.y > 0 else
+                self.point.moved(dtop=-1) if self.point.top_line > 0 else
+                self.point)
 
-    def down(self) -> Motion:
-        return ((0, 1, 0) if self.point.y + 1 < self.screen_size.rows
-                else (0, 0, 1))
+    def down(self) -> Position:
+        return (self.point.moved(dy=1)
+                if self.point.y + 1 < self.screen_size.rows
+                else self.point.moved(dtop=1)
+                if self.point.line < len(self.lines)
+                else self.point)
 
-    def page_up(self) -> Motion:
-        return self.mark_type.page_up(self.mark, self.point,
-                                      self.screen_size.rows)
+    def page_up(self) -> Position:
+        return self.mark_type.page_up(
+            self.mark, self.point, self.screen_size.rows,
+            max(self.screen_size.rows, len(self.lines)))
 
-    def page_down(self) -> Motion:
+    def page_down(self) -> Position:
         return self.mark_type.page_down(
             self.mark, self.point, self.screen_size.rows,
             max(self.screen_size.rows, len(self.lines)))
@@ -532,12 +604,13 @@ class GrabHandler(Handler):
     def _select(self, direction: DirectionStr,
                 mark_type: Type[Region]) -> None:
         self._ensure_mark(mark_type)
-        dx, dy, dtop = (getattr(self, direction))()
-        self._scroll(dtop)
         old_point = self.point
-        self.point = self.point.moved(dx, dy)
-        self._redraw_lines(self.mark_type.lines_affected(
-            self.mark, old_point, self.point))
+        self.point = (getattr(self, direction))()
+        if self.point.top_line != old_point.top_line:
+            self._redraw()
+        else:
+            self._redraw_lines(self.mark_type.lines_affected(
+                self.mark, old_point, self.point))
 
     def move(self, direction: DirectionStr) -> None:
         self._select(direction, NoRegion)
