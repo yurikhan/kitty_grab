@@ -26,6 +26,10 @@
 # map Down      move down
 # map Page_Up   move page up
 # map Page_Down move page down
+# map Home      move first
+# map a         move first nonwhite
+# map End       move last nonwhite
+# map e         move last
 
 #: Cancel selection and move the cursor around the screen.
 #: This will scroll the buffer if needed and possible.
@@ -42,6 +46,10 @@
 # map Shift+Down      select stream down
 # map Shift+Page_Up   select stream page up
 # map Shift+Page_Down select stream page down
+# map Shift+Home      select stream first
+# map A               select stream first nonwhite
+# map Shift+End       select stream last nonwhite
+# map E               select stream last
 
 #: Extend a stream selection.
 #: If no region is selected, start selecting.
@@ -53,6 +61,10 @@
 # map Alt+Down      select columnar down
 # map Alt+Page_Up   select columnar page up
 # map Alt+Page_Down select columnar page down
+# map Alt+Home      select columnar first
+# map Alt+A         select columnar first nonwhite
+# map Alt+End       select columnar last nonwhite
+# map Alt+E         select columnar last
 
 #: Extend a columnar selection.
 #: If no region is selected, start selecting.

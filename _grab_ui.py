@@ -1,4 +1,5 @@
 from functools import total_ordering
+from itertools import takewhile
 import os.path
 import re
 import sys
@@ -362,6 +363,10 @@ def parse_opts() -> Options:
     k('down', 'down', 'move down')
     k('page up', 'page_up', 'move page up')
     k('page down', 'page_down', 'move page down')
+    k('start of line', 'home', 'move first')
+    k('first non-whitespace', 'a', 'move first nonwhite')
+    k('last non-whitespace', 'end', 'move last nonwhite')
+    k('end of line', 'e', 'move last')
     k('scroll up', 'ctrl+up', 'scroll up')
     k('scroll down', 'ctrl+down', 'scroll down')
     k('select left', 'shift+left', 'select stream left')
@@ -370,12 +375,20 @@ def parse_opts() -> Options:
     k('select down', 'shift+down', 'select stream down')
     k('select page up', 'shift+page_up', 'select stream page up')
     k('select page down', 'shift+page_down', 'select stream page down')
+    k('select to start of line', 'shift+home', 'select stream first')
+    k('select to first non-whitespace', 'A', 'select stream first nonwhite')
+    k('select to last non-whitespace', 'shift+end', 'select stream last nonwhite')
+    k('select to end of line', 'E', 'select stream last')
     k('column select left', 'alt+left', 'select columnar left')
     k('column select right', 'alt+right', 'select columnar right')
     k('column select up', 'alt+up', 'select columnar up')
     k('column select down', 'alt+down', 'select columnar down')
     k('column select page up', 'alt+page_up', 'select columnar page up')
     k('column select page down', 'alt+page_down', 'select columnar page down')
+    k('column select to start of line', 'alt+home', 'select columnar first')
+    k('column select to first non-whitespace', 'alt+A', 'select columnar first nonwhite')
+    k('column select to last non-whitespace', 'alt+end', 'select columnar last nonwhite')
+    k('column select to end of line', 'alt+E', 'select columnar last')
 
     g('colors')
     o('selection_foreground', '#FFFFFF', option_type=to_color)
@@ -393,7 +406,9 @@ def parse_opts() -> Options:
     @func_with_args('move')
     def move(func: Callable, direction: str) -> Tuple[Callable, str]:
         assert direction.lower() in ['left', 'right', 'up', 'down',
-                                     'page up', 'page down']
+                                     'page up', 'page down',
+                                     'first', 'first nonwhite',
+                                     'last nonwhite', 'last']
         return func, direction.lower().replace(' ', '_')
 
     @func_with_args('scroll')
@@ -406,7 +421,9 @@ def parse_opts() -> Options:
         region_type, direction = args.split(' ', 1)
         assert region_type.lower() in ['stream', 'columnar']
         assert direction.lower() in ['left', 'right', 'up', 'down',
-                                     'page up', 'page down']
+                                     'page up', 'page down',
+                                     'first', 'first nonwhite',
+                                     'last nonwhite', 'last']
         return func, (region_type.lower(), direction.lower().replace(' ', '_'))
 
     def parse_kittens_key(val: str, args_funcs: Dict[str, Callable]) -> Tuple[
@@ -608,6 +625,24 @@ class GrabHandler(Handler):
         return self.mark_type.page_down(
             self.mark, self.point, self.screen_size.rows,
             max(self.screen_size.rows, len(self.lines)))
+
+    def first(self) -> Position:
+        return Position(0, self.point.y, self.point.top_line)
+
+    def first_nonwhite(self) -> Position:
+        line = unstyled(self.lines[self.point.line - 1])
+        prefix = ''.join(takewhile(str.isspace, line))
+        return Position(wcswidth(prefix), self.point.y, self.point.top_line)
+
+    def last_nonwhite(self) -> Position:
+        line = unstyled(self.lines[self.point.line - 1])
+        suffix = ''.join(takewhile(str.isspace, reversed(line)))
+        return Position(wcswidth(line[:len(line) - len(suffix)]),
+                        self.point.y, self.point.top_line)
+
+    def last(self) -> Position:
+        return Position(self.screen_size.cols,
+                        self.point.y, self.point.top_line)
 
     def _select(self, direction: DirectionStr,
                 mark_type: Type[Region]) -> None:
