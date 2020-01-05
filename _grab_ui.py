@@ -409,30 +409,38 @@ def parse_opts() -> Options:
     # Parsers/validators for key binding directives
     func_with_args, args_funcs = key_func()
 
+    def parse_region_type(region_type: str) -> str:
+        result = region_type.lower()
+        assert result in ['stream', 'columnar']
+        return result
+
+    def parse_direction(direction: str) -> str:
+        direction_lc = direction.lower()
+        assert direction_lc in ['left', 'right', 'up', 'down',
+                                'page up', 'page down',
+                                'first', 'first nonwhite',
+                                'last nonwhite', 'last',
+                                'top', 'bottom']
+        return direction_lc.replace(' ', '_')
+
+    def parse_scroll_direction(direction: str) -> str:
+        result = direction.lower()
+        assert result in ['up', 'down']
+        return result
+
     @func_with_args('move')
     def move(func: Callable, direction: str) -> Tuple[Callable, str]:
-        assert direction.lower() in ['left', 'right', 'up', 'down',
-                                     'page up', 'page down',
-                                     'first', 'first nonwhite',
-                                     'last nonwhite', 'last',
-                                     'top', 'bottom']
-        return func, direction.lower().replace(' ', '_')
+        return func, parse_direction(direction)
 
     @func_with_args('scroll')
     def scroll(func: Callable, direction: str) -> Tuple[Callable, str]:
-        assert direction.lower() in ['up', 'down']
-        return func, direction.lower()
+        return func, parse_scroll_direction(direction)
 
     @func_with_args('select')
     def select(func: Callable, args: str) -> Tuple[Callable, Tuple[str, str]]:
         region_type, direction = args.split(' ', 1)
-        assert region_type.lower() in ['stream', 'columnar']
-        assert direction.lower() in ['left', 'right', 'up', 'down',
-                                     'page up', 'page down',
-                                     'first', 'first nonwhite',
-                                     'last nonwhite', 'last',
-                                     'top', 'bottom']
-        return func, (region_type.lower(), direction.lower().replace(' ', '_'))
+        return func, (parse_region_type(region_type),
+                      parse_direction(direction))
 
     def parse_kittens_key(val: str, args_funcs: Dict[str, Callable]) -> Tuple[
             Tuple[ActionName, ActionArgs], KeyName, ShortcutMods, bool]:
