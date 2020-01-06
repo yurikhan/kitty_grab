@@ -32,6 +32,8 @@
 # map e         move last
 # map Ctrl+Home  move top
 # map Ctrl+End   move bottom
+# map Ctrl+Left  move word left
+# map Ctrl+Right move word right
 
 #: Cancel selection and move the cursor around the screen.
 #: This will scroll the buffer if needed and possible.
@@ -54,6 +56,8 @@
 # map E               select stream last
 # map Shift+Ctrl+Home  select stream top
 # map Shift+Ctrl+End   select stream bottom
+# map Shift+Ctrl+Left  select stream word left
+# map Shift+Ctrl+Right select stream word right
 
 #: Extend a stream selection.
 #: If no region is selected, start selecting.
@@ -71,6 +75,8 @@
 # map Alt+E         select columnar last
 # map Alt+Ctrl+Home  select columnar top
 # map Alt+Ctrl+End   select columnar bottom
+# map Alt+Ctrl+Left  select columnar word left
+# map Alt+Ctrl+Right select columnar word right
 
 #: Extend a columnar selection.
 #: If no region is selected, start selecting.

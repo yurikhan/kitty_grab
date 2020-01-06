@@ -1,10 +1,12 @@
 from functools import total_ordering
 from itertools import takewhile
+import json
 import os.path
 import re
 import sys
 from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
                     NamedTuple, Optional, Set, Tuple, Type, Union)
+import unicodedata
 
 from kitty.boss import Boss                       # type: ignore
 from kitty.cli import Namespace, parse_args       # type: ignore
@@ -350,7 +352,8 @@ def parse_opts() -> Options:
     all_options = {}  # type: OptionDefs
     o, k, g, _all_groups = option_func(all_options, {
         'shortcuts': ['Keyboard shortcuts'],
-        'colors': ['Colors']
+        'colors': ['Colors'],
+        'behavior': ['Behavior']
     })
 
     g('shortcuts')
@@ -369,6 +372,8 @@ def parse_opts() -> Options:
     k('end of line', 'e', 'move last')
     k('start of buffer', 'ctrl+home', 'move top')
     k('end of buffer', 'ctrl+end', 'move bottom')
+    k('word left', 'ctrl+left', 'move word left')
+    k('word right', 'ctrl+right', 'move word right')
     k('scroll up', 'ctrl+up', 'scroll up')
     k('scroll down', 'ctrl+down', 'scroll down')
     k('select left', 'shift+left', 'select stream left')
@@ -383,6 +388,8 @@ def parse_opts() -> Options:
     k('select to end of line', 'E', 'select stream last')
     k('select to start of buffer', 'shift+ctrl+home', 'select stream top')
     k('select to end of buffer', 'shift+ctrl+end', 'select stream bottom')
+    k('select word left', 'shift+ctrl+left', 'select stream word left')
+    k('select word right', 'shift+ctrl+right', 'select stream word right')
     k('column select left', 'alt+left', 'select columnar left')
     k('column select right', 'alt+right', 'select columnar right')
     k('column select up', 'alt+up', 'select columnar up')
@@ -395,10 +402,17 @@ def parse_opts() -> Options:
     k('column select to end of line', 'alt+E', 'select columnar last')
     k('column select to start of buffer', 'alt+ctrl+home', 'select columnar top')
     k('column select to end of buffer', 'alt+ctrl+end', 'select columnar bottom')
+    k('column select word left', 'alt+ctrl+left', 'select columnar word left')
+    k('column select word right', 'alt+ctrl+right', 'select columnar word right')
 
     g('colors')
     o('selection_foreground', '#FFFFFF', option_type=to_color)
     o('selection_background', '#5294E2', option_type=to_color)
+
+    g('behavior')
+    o('select_by_word_characters',
+      json.loads(os.getenv('KITTY_COMMON_OPTS'))['select_by_word_characters'],
+      option_type=str)
 
     type_map = {o.name: o.option_type
                 for o in all_options.values()
@@ -420,7 +434,8 @@ def parse_opts() -> Options:
                                 'page up', 'page down',
                                 'first', 'first nonwhite',
                                 'last nonwhite', 'last',
-                                'top', 'bottom']
+                                'top', 'bottom',
+                                'word left', 'word right']
         return direction_lc.replace(' ', '_')
 
     def parse_scroll_direction(direction: str) -> str:
@@ -668,6 +683,46 @@ class GrabHandler(Handler):
         y = min(len(self.lines) - self.point.top_line,
                 self.screen_size.rows - 1)
         return Position(x, y, len(self.lines) - y)
+
+    def _is_word_char(self, c: str) -> bool:
+        return (unicodedata.category(c)[0] in 'LN'
+                or c in self.opts.select_by_word_characters)
+
+    def _is_word_separator(self, c: str) -> bool:
+        return (unicodedata.category(c)[0] not in 'LN'
+                and c not in self.opts.select_by_word_characters)
+
+    def word_left(self) -> Position:
+        if self.point.x > 0:
+            line = unstyled(self.lines[self.point.line - 1])
+            pos = truncate_point_for_length(line, self.point.x)
+            pred = (self._is_word_char if self._is_word_char(line[pos - 1])
+                    else self._is_word_separator)
+            new_pos = pos - len(''.join(takewhile(pred, reversed(line[:pos]))))
+            return Position(wcswidth(line[:new_pos]),
+                            self.point.y, self.point.top_line)
+        if self.point.y > 0:
+            return Position(wcswidth(unstyled(self.lines[self.point.line - 2])),
+                            self.point.y - 1, self.point.top_line)
+        if self.point.top_line > 1:
+            return Position(wcswidth(unstyled(self.lines[self.point.line - 2])),
+                            self.point.y, self.point.top_line - 1)
+        return self.point
+
+    def word_right(self) -> Position:
+        line = unstyled(self.lines[self.point.line - 1])
+        pos = truncate_point_for_length(line, self.point.x)
+        if pos < len(line):
+            pred = (self._is_word_char if self._is_word_char(line[pos])
+                    else self._is_word_separator)
+            new_pos = pos + len(''.join(takewhile(pred, line[pos:])))
+            return Position(wcswidth(line[:new_pos]),
+                            self.point.y, self.point.top_line)
+        if self.point.y < self.screen_size.rows - 1:
+            return Position(0, self.point.y + 1, self.point.top_line)
+        if self.point.top_line + self.point.y < len(self.lines):
+            return Position(0, self.point.y, self.point.top_line + 1)
+        return self.point
 
     def _select(self, direction: DirectionStr,
                 mark_type: Type[Region]) -> None:
