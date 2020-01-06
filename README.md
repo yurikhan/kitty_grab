@@ -45,6 +45,22 @@ Press `Enter` to copy the selected region to the clipboard and exit,
 or `Esc` or `q` to exit without copying.
 
 
+## Start/end of buffer
+
+`Ctrl`+`Home`/`End` move (or, with `Shift` or `Alt`, select)
+to the top left or bottom right of the buffer, respectively.
+
+**Note:** By default, Kitty binds `Ctrl`+`Shift`+`Home`/`End`
+to scroll the scrollback buffer to top and bottom, respectively.
+You might want to install [`kitty_scroll`][kitty_scroll]
+to be able to use these shortcuts with `kitty_grab`.
+
+[kitty_scroll]: https://github.com/yurikhan/kitty-smart-scroll
+
+    map Ctrl+Shift+Home  kitten smart_scroll.py scroll_home Ctrl+Shift+Home
+    map Ctrl+Shift+End   kitten smart_scroll.py scroll_end  Ctrl+Shift+End
+
+
 # Configuration
 
 See the `grab.conf.example` file.

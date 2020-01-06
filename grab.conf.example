@@ -30,6 +30,8 @@
 # map a         move first nonwhite
 # map End       move last nonwhite
 # map e         move last
+# map Ctrl+Home  move top
+# map Ctrl+End   move bottom
 
 #: Cancel selection and move the cursor around the screen.
 #: This will scroll the buffer if needed and possible.
@@ -50,6 +52,8 @@
 # map A               select stream first nonwhite
 # map Shift+End       select stream last nonwhite
 # map E               select stream last
+# map Shift+Ctrl+Home  select stream top
+# map Shift+Ctrl+End   select stream bottom
 
 #: Extend a stream selection.
 #: If no region is selected, start selecting.
@@ -65,6 +69,8 @@
 # map Alt+A         select columnar first nonwhite
 # map Alt+End       select columnar last nonwhite
 # map Alt+E         select columnar last
+# map Alt+Ctrl+Home  select columnar top
+# map Alt+Ctrl+End   select columnar bottom
 
 #: Extend a columnar selection.
 #: If no region is selected, start selecting.

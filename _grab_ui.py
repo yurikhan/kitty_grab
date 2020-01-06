@@ -367,6 +367,8 @@ def parse_opts() -> Options:
     k('first non-whitespace', 'a', 'move first nonwhite')
     k('last non-whitespace', 'end', 'move last nonwhite')
     k('end of line', 'e', 'move last')
+    k('start of buffer', 'ctrl+home', 'move top')
+    k('end of buffer', 'ctrl+end', 'move bottom')
     k('scroll up', 'ctrl+up', 'scroll up')
     k('scroll down', 'ctrl+down', 'scroll down')
     k('select left', 'shift+left', 'select stream left')
@@ -379,6 +381,8 @@ def parse_opts() -> Options:
     k('select to first non-whitespace', 'A', 'select stream first nonwhite')
     k('select to last non-whitespace', 'shift+end', 'select stream last nonwhite')
     k('select to end of line', 'E', 'select stream last')
+    k('select to start of buffer', 'shift+ctrl+home', 'select stream top')
+    k('select to end of buffer', 'shift+ctrl+end', 'select stream bottom')
     k('column select left', 'alt+left', 'select columnar left')
     k('column select right', 'alt+right', 'select columnar right')
     k('column select up', 'alt+up', 'select columnar up')
@@ -389,6 +393,8 @@ def parse_opts() -> Options:
     k('column select to first non-whitespace', 'alt+A', 'select columnar first nonwhite')
     k('column select to last non-whitespace', 'alt+end', 'select columnar last nonwhite')
     k('column select to end of line', 'alt+E', 'select columnar last')
+    k('column select to start of buffer', 'alt+ctrl+home', 'select columnar top')
+    k('column select to end of buffer', 'alt+ctrl+end', 'select columnar bottom')
 
     g('colors')
     o('selection_foreground', '#FFFFFF', option_type=to_color)
@@ -408,7 +414,8 @@ def parse_opts() -> Options:
         assert direction.lower() in ['left', 'right', 'up', 'down',
                                      'page up', 'page down',
                                      'first', 'first nonwhite',
-                                     'last nonwhite', 'last']
+                                     'last nonwhite', 'last',
+                                     'top', 'bottom']
         return func, direction.lower().replace(' ', '_')
 
     @func_with_args('scroll')
@@ -423,7 +430,8 @@ def parse_opts() -> Options:
         assert direction.lower() in ['left', 'right', 'up', 'down',
                                      'page up', 'page down',
                                      'first', 'first nonwhite',
-                                     'last nonwhite', 'last']
+                                     'last nonwhite', 'last',
+                                     'top', 'bottom']
         return func, (region_type.lower(), direction.lower().replace(' ', '_'))
 
     def parse_kittens_key(val: str, args_funcs: Dict[str, Callable]) -> Tuple[
@@ -643,6 +651,15 @@ class GrabHandler(Handler):
     def last(self) -> Position:
         return Position(self.screen_size.cols,
                         self.point.y, self.point.top_line)
+
+    def top(self) -> Position:
+        return Position(0, 0, 1)
+
+    def bottom(self) -> Position:
+        x = wcswidth(unstyled(self.lines[-1]))
+        y = min(len(self.lines) - self.point.top_line,
+                self.screen_size.rows - 1)
+        return Position(x, y, len(self.lines) - y)
 
     def _select(self, direction: DirectionStr,
                 mark_type: Type[Region]) -> None:
