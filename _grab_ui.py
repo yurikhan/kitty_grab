@@ -9,7 +9,7 @@ from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
 import unicodedata
 
 from kitty.boss import Boss                       # type: ignore
-from kitty.cli import Namespace, parse_args       # type: ignore
+from kitty.cli import parse_args                  # type: ignore
 from kitty.conf.definition import (               # type: ignore
     Option, config_lines, option_func)
 from kitty.conf.utils import (                    # type: ignore
@@ -342,10 +342,45 @@ ActionName = str
 ActionArgs = tuple
 ShortcutMods = int
 KeyName = str
+Namespace = Any  # kitty.cli.Namespace (< 0.17.0)
 Options = Any  # dynamically created namespace class
 OptionName = str
 OptionValues = Dict[OptionName, Any]
 OptionDefs = Dict[OptionName, Option]
+TypeMap = Dict[OptionName, Callable[[Any], Any]]
+
+
+class TypeConvert:  # compatibility shim for 0.17.0
+    """
+    The kitty.conf.utils.parse_config_base function
+    has an argument that specifies the rules
+    for converting a configuration option value
+    from string(?) read from the config file
+    to its application-specific type.
+
+    Before 0.17.0, this argument has type TypeMap.
+    parse_config_base takes the element by OptionName key
+    calls it on the raw value
+    and expects it to return the converted value.
+
+    Starting with 0.17.0, it has type Callable[[OptionName, Any], Any]
+    and is called directly with the OptionName and raw value,
+    and expected to return the converted value.
+
+    This class implements both interfaces as a temporary measure.
+    """
+    def __init__(self, type_map: TypeMap) -> None:
+        self._type_map = type_map
+
+    def __getitem__(self, key: OptionName) -> Callable[[Any], Any]:
+        return self._type_map[key]
+
+    def get(self, key: OptionName,
+            default: Callable[[Any], Any] = None) -> Callable[[Any], Any]:
+        return self._type_map.get(key, default)
+
+    def __call__(self, key: OptionName, value: Any) -> Any:
+        return self._type_map.get(key, lambda v: v)(value)
 
 
 def parse_opts() -> Options:
@@ -414,9 +449,9 @@ def parse_opts() -> Options:
       json.loads(os.getenv('KITTY_COMMON_OPTS'))['select_by_word_characters'],
       option_type=str)
 
-    type_map = {o.name: o.option_type
-                for o in all_options.values()
-                if hasattr(o, 'option_type')}
+    type_map = TypeConvert({o.name: o.option_type
+                            for o in all_options.values()
+                            if hasattr(o, 'option_type')})
 
     defaults = None
 
@@ -457,9 +492,15 @@ def parse_opts() -> Options:
         return func, (parse_region_type(region_type),
                       parse_direction(direction))
 
-    def parse_kittens_key(val: str, args_funcs: Dict[str, Callable]) -> Tuple[
-            Tuple[ActionName, ActionArgs], KeyName, ShortcutMods, bool]:
-        action, key, mods, is_text = _parse_kittens_key(val, args_funcs)
+    def parse_kittens_key(val: str, args_funcs: Dict[str, Callable]) -> Optional[Tuple[
+            Tuple[ActionName, ActionArgs], KeyName, ShortcutMods, bool]]:
+        parsed_key = _parse_kittens_key(val, args_funcs)
+        if parsed_key is None:
+            return None
+        if len(parsed_key) == 2:  # kitty ≥ 0.17.0
+            action, (key, mods, is_text) = parsed_key
+        else:                     # kitty < 0.17.0
+            action, key, mods, is_text = parsed_key
         return (action, key, mods,
                 is_text and (0 == (mods or 0) & (kk.CTRL | kk.ALT | kk.SUPER)))
 
