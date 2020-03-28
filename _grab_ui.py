@@ -779,16 +779,22 @@ type=int
 --title
 (Internal)'''
 
-    args, _rest = parse_args(args[1:], ospec)
-    tty = open(os.ctermid())
-    lines = (sys.stdin.buffer.read().decode('utf-8')
-             .split('\n')[:-1])  # last line ends with \n, too
-    sys.stdin = tty
-    opts = parse_opts()
-    handler = GrabHandler(args, opts, lines)
-    loop = Loop()
-    loop.loop(handler)
-    return handler.result
+    try:
+        args, _rest = parse_args(args[1:], ospec)
+        tty = open(os.ctermid())
+        lines = (sys.stdin.buffer.read().decode('utf-8')
+                 .split('\n')[:-1])  # last line ends with \n, too
+        sys.stdin = tty
+        opts = parse_opts()
+        handler = GrabHandler(args, opts, lines)
+        loop = Loop()
+        loop.loop(handler)
+        return handler.result
+    except Exception as e:
+        from kittens.tui.loop import debug
+        from traceback import format_exc
+        debug(format_exc())
+        raise
 
 
 WindowId = int
