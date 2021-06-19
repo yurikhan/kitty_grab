@@ -1,6 +1,7 @@
 import os
 
-import _grab_ui
+GRAB_DIR = os.path.abspath(os.path.dirname(__file__))
+GRAB_UI_PATH = os.path.join(GRAB_DIR, "_grab_ui.py")
 
 
 def main(args):
@@ -19,7 +20,7 @@ def handle_result(args, result, target_window_id, boss):
     content = content.replace('\r\n', '\n').replace('\r', '\n')
     n_lines = content.count('\n')
     top_line = (n_lines - (window.screen.lines - 1) - window.screen.scrolled_by)
-    boss._run_kitten(_grab_ui.__file__, args=[
+    boss._run_kitten(GRAB_UI_PATH, args=[
         '--title={}'.format(window.title),
         '--cursor-x={}'.format(window.screen.cursor.x),
         '--cursor-y={}'.format(window.screen.cursor.y),
