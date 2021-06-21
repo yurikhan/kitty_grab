@@ -8,7 +8,8 @@ FuncArgsType = Tuple[str, Sequence[Any]]
 
 
 def color_parser(val: str) -> Color:
-    color = parse_sharp(val)
+    assert val.startswith('#'), f"Color should start with #, got {val}"
+    color = parse_sharp(val[1:])
     if color is None:
         raise ValueError(f"Couldn't parse {val} as a color")
     return color
