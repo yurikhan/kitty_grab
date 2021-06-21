@@ -10,12 +10,15 @@ import unicodedata
 
 from kitty.boss import Boss                       # type: ignore
 from kitty.cli import parse_args                  # type: ignore
-from kitty.conf.definition import (               # type: ignore
-    Option, config_lines, option_func)
+from kitten_options_types import (               # type: ignore
+    Options, defaults)
+from kitten_options_parse import (
+    create_result_dict, merge_result_dicts, parse_conf_item
+)
 from kitty.conf.utils import (                    # type: ignore
-    init_config, key_func, load_config, merge_dicts, parse_config_base,
-    parse_kittens_key as _parse_kittens_key, resolve_config, to_color)
-from kitty.constants import config_dir            # type: ignore
+    load_config as _load_config, parse_config_base,
+    resolve_config)
+from kitty.constants import config_dir
 from kitty.fast_data_types import (               # type: ignore
     set_clipboard_string, truncate_point_for_length, wcswidth)
 import kitty.key_encoding as kk                   # type: ignore
@@ -28,7 +31,6 @@ from kittens.tui.loop import Loop                 # type: ignore
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
     ResultDict = TypedDict('ResultDict', {'copy': str})
-
 
 AbsoluteLine = int
 ScreenLine = int
@@ -343,195 +345,31 @@ ActionArgs = tuple
 ShortcutMods = int
 KeyName = str
 Namespace = Any  # kitty.cli.Namespace (< 0.17.0)
-Options = Any  # dynamically created namespace class
 OptionName = str
 OptionValues = Dict[OptionName, Any]
-OptionDefs = Dict[OptionName, Option]
 TypeMap = Dict[OptionName, Callable[[Any], Any]]
 
 
-class TypeConvert:  # compatibility shim for 0.17.0
-    """
-    The kitty.conf.utils.parse_config_base function
-    has an argument that specifies the rules
-    for converting a configuration option value
-    from string(?) read from the config file
-    to its application-specific type.
+def load_config(*paths: str, overrides: Optional[Iterable[str]] = None) -> Options:
 
-    Before 0.17.0, this argument has type TypeMap.
-    parse_config_base takes the element by OptionName key
-    calls it on the raw value
-    and expects it to return the converted value.
+    def parse_config(lines: Iterable[str]) -> Dict[str, Any]:
+        ans: Dict[str, Any] = create_result_dict()
+        parse_config_base(
+            lines,
+            parse_conf_item,
+            ans,
+        )
+        return ans
 
-    Starting with 0.17.0, it has type Callable[[OptionName, Any], Any]
-    and is called directly with the OptionName and raw value,
-    and expected to return the converted value.
-
-    This class implements both interfaces as a temporary measure.
-    """
-    def __init__(self, type_map: TypeMap) -> None:
-        self._type_map = type_map
-
-    def __getitem__(self, key: OptionName) -> Callable[[Any], Any]:
-        return self._type_map[key]
-
-    def get(self, key: OptionName,
-            default: Callable[[Any], Any] = None) -> Callable[[Any], Any]:
-        return self._type_map.get(key, default)
-
-    def __call__(self, key: OptionName, value: Any) -> Any:
-        return self._type_map.get(key, lambda v: v)(value)
-
-
-def parse_opts() -> Options:
-    all_options = {}  # type: OptionDefs
-    o, k, g, _all_groups = option_func(all_options, {
-        'shortcuts': ['Keyboard shortcuts'],
-        'colors': ['Colors'],
-        'behavior': ['Behavior']
-    })
-
-    g('shortcuts')
-    k('quit', 'q', 'quit')
-    k('quit', 'esc', 'quit')
-    k('confirm', 'enter', 'confirm')
-    k('left', 'left', 'move left')
-    k('right', 'right', 'move right')
-    k('up', 'up', 'move up')
-    k('down', 'down', 'move down')
-    k('page up', 'page_up', 'move page up')
-    k('page down', 'page_down', 'move page down')
-    k('start of line', 'home', 'move first')
-    k('first non-whitespace', 'a', 'move first nonwhite')
-    k('last non-whitespace', 'end', 'move last nonwhite')
-    k('end of line', 'e', 'move last')
-    k('start of buffer', 'ctrl+home', 'move top')
-    k('end of buffer', 'ctrl+end', 'move bottom')
-    k('word left', 'ctrl+left', 'move word left')
-    k('word right', 'ctrl+right', 'move word right')
-    k('scroll up', 'ctrl+up', 'scroll up')
-    k('scroll down', 'ctrl+down', 'scroll down')
-    k('select left', 'shift+left', 'select stream left')
-    k('select right', 'shift+right', 'select stream right')
-    k('select up', 'shift+up', 'select stream up')
-    k('select down', 'shift+down', 'select stream down')
-    k('select page up', 'shift+page_up', 'select stream page up')
-    k('select page down', 'shift+page_down', 'select stream page down')
-    k('select to start of line', 'shift+home', 'select stream first')
-    k('select to first non-whitespace', 'A', 'select stream first nonwhite')
-    k('select to last non-whitespace', 'shift+end', 'select stream last nonwhite')
-    k('select to end of line', 'E', 'select stream last')
-    k('select to start of buffer', 'shift+ctrl+home', 'select stream top')
-    k('select to end of buffer', 'shift+ctrl+end', 'select stream bottom')
-    k('select word left', 'shift+ctrl+left', 'select stream word left')
-    k('select word right', 'shift+ctrl+right', 'select stream word right')
-    k('column select left', 'alt+left', 'select columnar left')
-    k('column select right', 'alt+right', 'select columnar right')
-    k('column select up', 'alt+up', 'select columnar up')
-    k('column select down', 'alt+down', 'select columnar down')
-    k('column select page up', 'alt+page_up', 'select columnar page up')
-    k('column select page down', 'alt+page_down', 'select columnar page down')
-    k('column select to start of line', 'alt+home', 'select columnar first')
-    k('column select to first non-whitespace', 'alt+A', 'select columnar first nonwhite')
-    k('column select to last non-whitespace', 'alt+end', 'select columnar last nonwhite')
-    k('column select to end of line', 'alt+E', 'select columnar last')
-    k('column select to start of buffer', 'alt+ctrl+home', 'select columnar top')
-    k('column select to end of buffer', 'alt+ctrl+end', 'select columnar bottom')
-    k('column select word left', 'alt+ctrl+left', 'select columnar word left')
-    k('column select word right', 'alt+ctrl+right', 'select columnar word right')
-
-    g('colors')
-    o('selection_foreground', '#FFFFFF', option_type=to_color)
-    o('selection_background', '#5294E2', option_type=to_color)
-
-    g('behavior')
-    o('select_by_word_characters',
-      json.loads(os.getenv('KITTY_COMMON_OPTS'))['select_by_word_characters'],
-      option_type=str)
-
-    type_map = TypeConvert({o.name: o.option_type
-                            for o in all_options.values()
-                            if hasattr(o, 'option_type')})
-
-    defaults = None
-
-    # Parsers/validators for key binding directives
-    func_with_args, args_funcs = key_func()
-
-    def parse_region_type(region_type: str) -> str:
-        result = region_type.lower()
-        assert result in ['stream', 'columnar']
-        return result
-
-    def parse_direction(direction: str) -> str:
-        direction_lc = direction.lower()
-        assert direction_lc in ['left', 'right', 'up', 'down',
-                                'page up', 'page down',
-                                'first', 'first nonwhite',
-                                'last nonwhite', 'last',
-                                'top', 'bottom',
-                                'word left', 'word right']
-        return direction_lc.replace(' ', '_')
-
-    def parse_scroll_direction(direction: str) -> str:
-        result = direction.lower()
-        assert result in ['up', 'down']
-        return result
-
-    @func_with_args('move')
-    def move(func: Callable, direction: str) -> Tuple[Callable, str]:
-        return func, parse_direction(direction)
-
-    @func_with_args('scroll')
-    def scroll(func: Callable, direction: str) -> Tuple[Callable, str]:
-        return func, parse_scroll_direction(direction)
-
-    @func_with_args('select')
-    def select(func: Callable, args: str) -> Tuple[Callable, Tuple[str, str]]:
-        region_type, direction = args.split(' ', 1)
-        return func, (parse_region_type(region_type),
-                      parse_direction(direction))
-
-    def parse_kittens_key(val: str, args_funcs: Dict[str, Callable]) -> Optional[Tuple[
-            Tuple[ActionName, ActionArgs], KeyName, ShortcutMods, bool]]:
-        parsed_key = _parse_kittens_key(val, args_funcs)
-        if parsed_key is None:
-            return None
-        if len(parsed_key) == 2:  # kitty ≥ 0.17.0
-            action, (key, mods, is_text) = parsed_key
-        else:                     # kitty < 0.17.0
-            action, key, mods, is_text = parsed_key
-        return (action, key, mods,
-                is_text and (0 == (mods or 0) & (kk.CTRL | kk.ALT | kk.SUPER)))
-
-    # Configuration reader helpers
-    def special_handling(key: OptionName, val: str,
-                         result: OptionValues) -> bool:
-        if key == 'map':
-            action, *key_def = parse_kittens_key(val, args_funcs)
-            result['key_definitions'][tuple(key_def)] = action
-            return True
-        return False
-
-    def parse_config(lines: List[str],
-                     check_keys: bool = True) -> OptionValues:
-        result = {'key_definitions': {}}  # type: OptionValues
-        parse_config_base(lines, defaults, type_map, special_handling,
-                          result, check_keys=check_keys)
-        return result
-
-    def merge_configs(defaults: OptionValues,
-                      vals: OptionValues) -> OptionValues:
-        return {k: (merge_dicts(v, vals.get(k, {}))
-                    if isinstance(v, dict)
-                    else vals.get(k, v))
-                for k, v in defaults.items()}
-
-    Options, defaults = init_config(config_lines(all_options), parse_config)
     configs = list(resolve_config('/etc/xdg/kitty/grab.conf',
                                   os.path.join(config_dir, 'grab.conf'),
                                   config_files_on_cmd_line=None))
-    return load_config(Options, defaults, parse_config, merge_configs, *configs)
+    overrides = tuple(overrides) if overrides is not None else ()
+    opts_dict, paths = _load_config(defaults, parse_config, merge_result_dicts, *configs, overrides=overrides)
+    opts = Options(opts_dict)
+    opts.config_paths = paths
+    opts.config_overrides = overrides
+    return opts
 
 
 def unstyled(s: str) -> str:
@@ -562,8 +400,8 @@ class GrabHandler(Handler):
         self.mark = None           # type: Optional[Position]
         self.mark_type = NoRegion  # type: Type[Region]
         self.result = None         # type: Optional[ResultDict]
-        for key_def, action in self.opts.key_definitions.items():
-            self.add_shortcut(action, *key_def)
+        for spec, action in self.opts.map:
+            self.add_shortcut(action, spec)
 
     def _start_end(self) -> Tuple[Position, Position]:
         start, end = sorted([self.point, self.mark or self.point])
@@ -626,13 +464,7 @@ class GrabHandler(Handler):
         self.cmd.set_window_title('Grab – {}'.format(self.args.title))
         self._redraw()
 
-    def on_text(self, text: str, in_bracketed_paste: bool = False) -> None:
-        action = self.shortcut_action(text)
-        if action is None:
-            return
-        self.perform_action(action)
-
-    def on_key(self, key_event: KeyEvent) -> None:
+    def on_key_event(self, key_event: KeyEvent, in_bracketed_paste: bool = False) -> None:
         action = self.shortcut_action(key_event)
         if (key_event.type not in [kk.PRESS, kk.REPEAT]
                 or action is None):
@@ -826,7 +658,7 @@ type=int
         lines = (sys.stdin.buffer.read().decode('utf-8')
                  .split('\n')[:-1])  # last line ends with \n, too
         sys.stdin = tty
-        opts = parse_opts()
+        opts = load_config()
         handler = GrabHandler(args, opts, lines)
         loop = Loop()
         loop.loop(handler)
