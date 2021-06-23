@@ -10,8 +10,11 @@ import unicodedata
 
 from kitty.boss import Boss                       # type: ignore
 from kitty.cli import parse_args                  # type: ignore
-from .kitten_options_types import (               # type: ignore
+from kitten_options_types import (               # type: ignore
     Options, defaults)
+from kitten_options_parse import (
+    create_result_dict, merge_result_dicts, parse_conf_item
+)
 from kitty.conf.utils import (                    # type: ignore
     load_config as _load_config, parse_config_base)
 from kitty.fast_data_types import (               # type: ignore
@@ -380,9 +383,6 @@ class TypeConvert:  # compatibility shim for 0.17.0
 
 
 def load_config(*paths: str, overrides: Optional[Iterable[str]] = None) -> Options:
-    from .kitten_options_parse import  (
-        create_result_dict, merge_result_dicts, parse_conf_item
-    )
 
     def parse_config(lines: Iterable[str]) -> Dict[str, Any]:
         ans: Dict[str, Any] = create_result_dict()
@@ -429,8 +429,8 @@ class GrabHandler(Handler):
         self.mark = None           # type: Optional[Position]
         self.mark_type = NoRegion  # type: Type[Region]
         self.result = None         # type: Optional[ResultDict]
-        for key_def, action in self.opts.key_definitions.items():
-            self.add_shortcut(action, *key_def)
+        for spec, action in self.opts.map:
+            self.add_shortcut(action, spec)
 
     def _start_end(self) -> Tuple[Position, Position]:
         start, end = sorted([self.point, self.mark or self.point])
@@ -493,12 +493,6 @@ class GrabHandler(Handler):
         self.cmd.set_window_title('Grab – {}'.format(self.args.title))
         self._redraw()
 
-    def on_text(self, text: str, in_bracketed_paste: bool = False) -> None:
-        action = self.shortcut_action(text)
-        if action is None:
-            return
-        self.perform_action(action)
-
     def on_key(self, key_event: KeyEvent) -> None:
         action = self.shortcut_action(key_event)
         if (key_event.type not in [kk.PRESS, kk.REPEAT]
@@ -508,6 +502,8 @@ class GrabHandler(Handler):
 
     def perform_action(self, action: Tuple[ActionName, ActionArgs]) -> None:
         func, args = action
+        if len(args) == 1:  # TODO how to do this correctly?
+            args = args[0].split()
         getattr(self, func)(*args)
 
     def quit(self, *args: Any) -> None:
