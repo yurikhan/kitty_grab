@@ -349,39 +349,6 @@ OptionValues = Dict[OptionName, Any]
 TypeMap = Dict[OptionName, Callable[[Any], Any]]
 
 
-class TypeConvert:  # compatibility shim for 0.17.0
-    """
-    The kitty.conf.utils.parse_config_base function
-    has an argument that specifies the rules
-    for converting a configuration option value
-    from string(?) read from the config file
-    to its application-specific type.
-
-    Before 0.17.0, this argument has type TypeMap.
-    parse_config_base takes the element by OptionName key
-    calls it on the raw value
-    and expects it to return the converted value.
-
-    Starting with 0.17.0, it has type Callable[[OptionName, Any], Any]
-    and is called directly with the OptionName and raw value,
-    and expected to return the converted value.
-
-    This class implements both interfaces as a temporary measure.
-    """
-    def __init__(self, type_map: TypeMap) -> None:
-        self._type_map = type_map
-
-    def __getitem__(self, key: OptionName) -> Callable[[Any], Any]:
-        return self._type_map[key]
-
-    def get(self, key: OptionName,
-            default: Callable[[Any], Any] = None) -> Callable[[Any], Any]:
-        return self._type_map.get(key, default)
-
-    def __call__(self, key: OptionName, value: Any) -> Any:
-        return self._type_map.get(key, lambda v: v)(value)
-
-
 def load_config(*paths: str, overrides: Optional[Iterable[str]] = None) -> Options:
 
     def parse_config(lines: Iterable[str]) -> Dict[str, Any]:
