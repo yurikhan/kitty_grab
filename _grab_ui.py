@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypedDict
     ResultDict = TypedDict('ResultDict', {'copy': str})
 
+USER_CONFIG_PATH = '~/.config/kitty/grab.conf'
 
 AbsoluteLine = int
 ScreenLine = int
@@ -654,7 +655,7 @@ type=int
         lines = (sys.stdin.buffer.read().decode('utf-8')
                  .split('\n')[:-1])  # last line ends with \n, too
         sys.stdin = tty
-        opts = load_config()
+        opts = load_config(USER_CONFIG_PATH)
         handler = GrabHandler(args, opts, lines)
         loop = Loop()
         loop.loop(handler)
