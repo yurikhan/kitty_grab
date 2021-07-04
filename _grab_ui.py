@@ -16,7 +16,9 @@ from kitten_options_parse import (
     create_result_dict, merge_result_dicts, parse_conf_item
 )
 from kitty.conf.utils import (                    # type: ignore
-    load_config as _load_config, parse_config_base)
+    load_config as _load_config, parse_config_base,
+    resolve_config)
+from kitty.constants import config_dir
 from kitty.fast_data_types import (               # type: ignore
     set_clipboard_string, truncate_point_for_length, wcswidth)
 import kitty.key_encoding as kk                   # type: ignore
@@ -29,8 +31,6 @@ from kittens.tui.loop import Loop                 # type: ignore
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
     ResultDict = TypedDict('ResultDict', {'copy': str})
-
-USER_CONFIG_PATH = '~/.config/kitty/grab.conf'
 
 AbsoluteLine = int
 ScreenLine = int
@@ -361,8 +361,11 @@ def load_config(*paths: str, overrides: Optional[Iterable[str]] = None) -> Optio
         )
         return ans
 
+    configs = list(resolve_config('/etc/xdg/kitty/grab.conf',
+                                  os.path.join(config_dir, 'grab.conf'),
+                                  config_files_on_cmd_line=None))
     overrides = tuple(overrides) if overrides is not None else ()
-    opts_dict, paths = _load_config(defaults, parse_config, merge_result_dicts, *paths, overrides=overrides)
+    opts_dict, paths = _load_config(defaults, parse_config, merge_result_dicts, *configs, overrides=overrides)
     opts = Options(opts_dict)
     opts.config_paths = paths
     opts.config_overrides = overrides
@@ -655,7 +658,7 @@ type=int
         lines = (sys.stdin.buffer.read().decode('utf-8')
                  .split('\n')[:-1])  # last line ends with \n, too
         sys.stdin = tty
-        opts = load_config(USER_CONFIG_PATH)
+        opts = load_config()
         handler = GrabHandler(args, opts, lines)
         loop = Loop()
         loop.loop(handler)
