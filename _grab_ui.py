@@ -460,7 +460,7 @@ class GrabHandler(Handler):
         self.cmd.set_window_title('Grab – {}'.format(self.args.title))
         self._redraw()
 
-    def on_key(self, key_event: KeyEvent) -> None:
+    def on_key_event(self, key_event: KeyEvent, in_bracketed_paste: bool = False) -> None:
         action = self.shortcut_action(key_event)
         if (key_event.type not in [kk.PRESS, kk.REPEAT]
                 or action is None):
@@ -469,8 +469,6 @@ class GrabHandler(Handler):
 
     def perform_action(self, action: Tuple[ActionName, ActionArgs]) -> None:
         func, args = action
-        if len(args) == 1:  # TODO how to do this correctly?
-            args = args[0].split()
         getattr(self, func)(*args)
 
     def quit(self, *args: Any) -> None:
