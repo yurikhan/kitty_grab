@@ -82,15 +82,15 @@ defaults.map = [
     # move
     (ParsedShortcut(mods=0, key_name='DOWN'), KeyAction('move', ('down',))),
     # move
-    (ParsedShortcut(mods=0, key_name='PAGE_UP'), KeyAction('move', ('page up',))),
+    (ParsedShortcut(mods=0, key_name='PAGE_UP'), KeyAction('move', ('page_up',))),
     # move
-    (ParsedShortcut(mods=0, key_name='PAGE_DOWN'), KeyAction('move', ('page down',))),
+    (ParsedShortcut(mods=0, key_name='PAGE_DOWN'), KeyAction('move', ('page_down',))),
     # move
     (ParsedShortcut(mods=0, key_name='HOME'), KeyAction('move', ('first',))),
     # move
-    (ParsedShortcut(mods=0, key_name='a'), KeyAction('move', ('first nonwhite',))),
+    (ParsedShortcut(mods=0, key_name='a'), KeyAction('move', ('first_nonwhite',))),
     # move
-    (ParsedShortcut(mods=0, key_name='END'), KeyAction('move', ('last nonwhite',))),
+    (ParsedShortcut(mods=0, key_name='END'), KeyAction('move', ('last_nonwhite',))),
     # move
     (ParsedShortcut(mods=0, key_name='e'), KeyAction('move', ('last',))),
     # move
@@ -98,67 +98,67 @@ defaults.map = [
     # move
     (ParsedShortcut(mods=4, key_name='END'), KeyAction('move', ('bottom',))),
     # move
-    (ParsedShortcut(mods=4, key_name='LEFT'), KeyAction('move', ('word left',))),
+    (ParsedShortcut(mods=4, key_name='LEFT'), KeyAction('move', ('word_left',))),
     # move
-    (ParsedShortcut(mods=4, key_name='RIGHT'), KeyAction('move', ('word right',))),
+    (ParsedShortcut(mods=4, key_name='RIGHT'), KeyAction('move', ('word_right',))),
     # scroll
     (ParsedShortcut(mods=4, key_name='UP'), KeyAction('scroll', ('up',))),
     # scroll
     (ParsedShortcut(mods=4, key_name='DOWN'), KeyAction('scroll', ('down',))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='LEFT'), KeyAction('select', ('stream left',))),
+    (ParsedShortcut(mods=1, key_name='LEFT'), KeyAction('select', ('stream', 'left'))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='RIGHT'), KeyAction('select', ('stream right',))),
+    (ParsedShortcut(mods=1, key_name='RIGHT'), KeyAction('select', ('stream', 'right'))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='UP'), KeyAction('select', ('stream up',))),
+    (ParsedShortcut(mods=1, key_name='UP'), KeyAction('select', ('stream', 'up'))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='DOWN'), KeyAction('select', ('stream down',))),
+    (ParsedShortcut(mods=1, key_name='DOWN'), KeyAction('select', ('stream', 'down'))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='PAGE_UP'), KeyAction('select', ('stream page up',))),
+    (ParsedShortcut(mods=1, key_name='PAGE_UP'), KeyAction('select', ('stream', 'page_up'))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='PAGE_DOWN'), KeyAction('select', ('stream page down',))),
+    (ParsedShortcut(mods=1, key_name='PAGE_DOWN'), KeyAction('select', ('stream', 'page_down'))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='HOME'), KeyAction('select', ('stream first',))),
+    (ParsedShortcut(mods=1, key_name='HOME'), KeyAction('select', ('stream', 'first'))),
     # select_stream
-    (ParsedShortcut(mods=0, key_name='A'), KeyAction('select', ('stream first nonwhite',))),
+    (ParsedShortcut(mods=0, key_name='A'), KeyAction('select', ('stream', 'first_nonwhite'))),
     # select_stream
-    (ParsedShortcut(mods=1, key_name='END'), KeyAction('select', ('stream last nonwhite',))),
+    (ParsedShortcut(mods=1, key_name='END'), KeyAction('select', ('stream', 'last_nonwhite'))),
     # select_stream
-    (ParsedShortcut(mods=0, key_name='E'), KeyAction('select', ('stream last',))),
+    (ParsedShortcut(mods=0, key_name='E'), KeyAction('select', ('stream', 'last'))),
     # select_stream
-    (ParsedShortcut(mods=5, key_name='HOME'), KeyAction('select', ('stream top',))),
+    (ParsedShortcut(mods=5, key_name='HOME'), KeyAction('select', ('stream', 'top'))),
     # select_stream
-    (ParsedShortcut(mods=5, key_name='END'), KeyAction('select', ('stream bottom',))),
+    (ParsedShortcut(mods=5, key_name='END'), KeyAction('select', ('stream', 'bottom'))),
     # select_stream
-    (ParsedShortcut(mods=5, key_name='LEFT'), KeyAction('select', ('stream word left',))),
+    (ParsedShortcut(mods=5, key_name='LEFT'), KeyAction('select', ('stream', 'word_left'))),
     # select_stream
-    (ParsedShortcut(mods=5, key_name='RIGHT'), KeyAction('select', ('stream word right',))),
+    (ParsedShortcut(mods=5, key_name='RIGHT'), KeyAction('select', ('stream', 'word_right'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='LEFT'), KeyAction('select', ('columnar left',))),
+    (ParsedShortcut(mods=2, key_name='LEFT'), KeyAction('select', ('columnar', 'left'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='RIGHT'), KeyAction('select', ('columnar right',))),
+    (ParsedShortcut(mods=2, key_name='RIGHT'), KeyAction('select', ('columnar', 'right'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='UP'), KeyAction('select', ('columnar up',))),
+    (ParsedShortcut(mods=2, key_name='UP'), KeyAction('select', ('columnar', 'up'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='DOWN'), KeyAction('select', ('columnar down',))),
+    (ParsedShortcut(mods=2, key_name='DOWN'), KeyAction('select', ('columnar', 'down'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='PAGE_UP'), KeyAction('select', ('columnar page up',))),
+    (ParsedShortcut(mods=2, key_name='PAGE_UP'), KeyAction('select', ('columnar', 'page_up'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='PAGE_DOWN'), KeyAction('select', ('columnar page down',))),
+    (ParsedShortcut(mods=2, key_name='PAGE_DOWN'), KeyAction('select', ('columnar', 'page_down'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='HOME'), KeyAction('select', ('columnar first',))),
+    (ParsedShortcut(mods=2, key_name='HOME'), KeyAction('select', ('columnar', 'first'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='A'), KeyAction('select', ('columnar first nonwhite',))),
+    (ParsedShortcut(mods=2, key_name='A'), KeyAction('select', ('columnar', 'first_nonwhite'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='END'), KeyAction('select', ('columnar last nonwhite',))),
+    (ParsedShortcut(mods=2, key_name='END'), KeyAction('select', ('columnar', 'last_nonwhite'))),
     # select_columnar
-    (ParsedShortcut(mods=2, key_name='E'), KeyAction('select', ('columnar last',))),
+    (ParsedShortcut(mods=2, key_name='E'), KeyAction('select', ('columnar', 'last'))),
     # select_columnar
-    (ParsedShortcut(mods=6, key_name='HOME'), KeyAction('select', ('columnar top',))),
+    (ParsedShortcut(mods=6, key_name='HOME'), KeyAction('select', ('columnar', 'top'))),
     # select_columnar
-    (ParsedShortcut(mods=6, key_name='END'), KeyAction('select', ('columnar bottom',))),
+    (ParsedShortcut(mods=6, key_name='END'), KeyAction('select', ('columnar', 'bottom'))),
     # select_columnar
-    (ParsedShortcut(mods=6, key_name='LEFT'), KeyAction('select', ('columnar word left',))),
+    (ParsedShortcut(mods=6, key_name='LEFT'), KeyAction('select', ('columnar', 'word_left'))),
     # select_columnar
-    (ParsedShortcut(mods=6, key_name='RIGHT'), KeyAction('select', ('columnar word right',))),
+    (ParsedShortcut(mods=6, key_name='RIGHT'), KeyAction('select', ('columnar', 'word_right'))),
 ]

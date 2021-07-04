@@ -2,17 +2,17 @@
 # vim:fileencoding=utf-8
 
 import typing
-from kitten_options_utils import color_parser, parse_map
-from kitty.conf.utils import merge_dicts
+from kitten_options_utils import parse_map
+from kitty.conf.utils import merge_dicts, to_color
 
 
 class Parser:
 
     def selection_background(self, val: str, ans: typing.Dict[str, typing.Any]) -> None:
-        ans['selection_background'] = color_parser(val)
+        ans['selection_background'] = to_color(val)
 
     def selection_foreground(self, val: str, ans: typing.Dict[str, typing.Any]) -> None:
-        ans['selection_foreground'] = color_parser(val)
+        ans['selection_foreground'] = to_color(val)
 
     def map(self, val: str, ans: typing.Dict[str, typing.Any]) -> None:
         for k in parse_map(val):
