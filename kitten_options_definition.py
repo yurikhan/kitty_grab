@@ -18,11 +18,11 @@ map = definition.add_map
 agr('color', 'Color')
 
 opt('selection_foreground', '#FFFFFF',
-    option_type='color_parser',
+    option_type='to_color',
     long_text='''
 Foreground color for selected text while grabbing.''')
-opt('selection_background', '#5294E2', 
-    option_type='color_parser',
+opt('selection_background', '#5294E2',
+    option_type='to_color',
     long_text='''
 Background color for selected text while grabbing.''')
 
