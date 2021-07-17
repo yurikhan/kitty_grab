@@ -1,13 +1,18 @@
 import os
+from typing import Any, Dict, List, Sequence
+
+from kittens.tui.handler import result_handler
+from kitty.typing import BossType
 
 import _grab_ui
 
 
-def main(args):
+def main(args: List[str]) -> None:
     pass
 
 
-def handle_result(args, result, target_window_id, boss):
+@result_handler(no_ui=True)
+def handle_result(args: List[str], data: Dict[str, Any], target_window_id: int, boss: BossType) -> None:
     window = boss.window_id_map.get(target_window_id)
     if window is None:
         return
@@ -26,6 +31,3 @@ def handle_result(args, result, target_window_id, boss):
         '--top-line={}'.format(top_line)],
         input_data=content.encode('utf-8'),
         window=window)
-
-
-setattr(handle_result, 'no_ui', True)

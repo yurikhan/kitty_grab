@@ -1,4 +1,4 @@
-from typing import Any, Sequence, Tuple, Iterable, Callable
+from typing import Any, Callable, Iterable, Sequence, Tuple
 
 from kitty.conf.utils import KittensKeyDefinition, key_func, parse_kittens_key
 

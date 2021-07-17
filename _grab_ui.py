@@ -8,24 +8,18 @@ from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
                     NamedTuple, Optional, Set, Tuple, Type, Union)
 import unicodedata
 
-from kitty.boss import Boss                       # type: ignore
-from kitty.cli import parse_args                  # type: ignore
-from kitten_options_types import (               # type: ignore
-    Options, defaults)
-from kitten_options_parse import (
-    create_result_dict, merge_result_dicts, parse_conf_item
-)
-from kitty.conf.utils import (                    # type: ignore
-    load_config as _load_config, parse_config_base,
-    resolve_config)
+from kitty.boss import Boss
+from kitty.cli import parse_args
+from kitten_options_types import Options, defaults
+from kitten_options_parse import create_result_dict, merge_result_dicts, parse_conf_item
+from kitty.conf.utils import load_config as _load_config, parse_config_base, resolve_config
 from kitty.constants import config_dir
-from kitty.fast_data_types import (               # type: ignore
-    set_clipboard_string, truncate_point_for_length, wcswidth)
-import kitty.key_encoding as kk                   # type: ignore
-from kitty.key_encoding import KeyEvent           # type: ignore
-from kitty.rgb import color_as_sgr                # type: ignore
-from kittens.tui.handler import Handler           # type: ignore
-from kittens.tui.loop import Loop                 # type: ignore
+from kitty.fast_data_types import set_clipboard_string, truncate_point_for_length, wcswidth
+import kitty.key_encoding as kk
+from kitty.key_encoding import KeyEvent
+from kitty.rgb import color_as_sgr
+from kittens.tui.handler import Handler
+from kittens.tui.loop import Loop
 
 
 if TYPE_CHECKING:
@@ -363,7 +357,7 @@ def load_config(*paths: str, overrides: Optional[Iterable[str]] = None) -> Optio
 
     configs = list(resolve_config('/etc/xdg/kitty/grab.conf',
                                   os.path.join(config_dir, 'grab.conf'),
-                                  config_files_on_cmd_line=None))
+                                  config_files_on_cmd_line=[]))
     overrides = tuple(overrides) if overrides is not None else ()
     opts_dict, paths = _load_config(defaults, parse_config, merge_result_dicts, *configs, overrides=overrides)
     opts = Options(opts_dict)
@@ -635,7 +629,7 @@ class GrabHandler(Handler):
 
 
 def main(args: List[str]) -> Optional['ResultDict']:
-    def ospec():
+    def ospec() -> str:
         return '''
 --cursor-x
 dest=x
