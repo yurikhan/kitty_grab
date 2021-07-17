@@ -13,7 +13,10 @@ This project implements keyboard-driven text selection as a kitten.
 
 # Minimum requirements
 
-Kitty ≥0.13.0, <0.21.0.
+Kitty ≥0.21.2.
+
+For Kitty ≥0.13.0, <0.21.0, see the tag `v0.20`,
+but be aware that version will not be updated.
 
 
 # Installation and initial configuration
