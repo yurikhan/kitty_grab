@@ -104,3 +104,13 @@ map('SelectColumnar word left',      'select_columnar Alt+Ctrl+Left  select colu
 map('SelectColumnar word right',     'select_columnar Alt+Ctrl+Right select columnar word right', long_text=long_text)
 
 egr()  # }}}
+
+agr('behavior', 'Behavior')  # {{{
+
+opt('select_by_word_characters', '',
+    option_type='str',
+    long_text='''
+Characters considered part of a word when moving by words.
+By default, those are taken from main Kitty config.''')
+
+egr()  # }}}

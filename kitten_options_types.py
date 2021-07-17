@@ -11,10 +11,14 @@ import kitty.types
 
 
 option_names = (  # {{{
- 'map', 'selection_background', 'selection_foreground')  # }}}
+ 'map',
+ 'select_by_word_characters',
+ 'selection_background',
+ 'selection_foreground')  # }}}
 
 
 class Options:
+    select_by_word_characters: str = ''
     selection_background: Color = Color(red=82, green=148, blue=226)
     selection_foreground: Color = Color(red=255, green=255, blue=255)
     map: typing.List[typing.Tuple[kitty.types.ParsedShortcut, kitty.conf.utils.KeyAction]] = []

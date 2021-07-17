@@ -557,13 +557,19 @@ class GrabHandler(Handler):
                 self.screen_size.rows - 1)
         return Position(x, y, len(self.lines) - y)
 
+    @property
+    def _select_by_word_characters(self) -> str:
+        return (self.opts.select_by_word_characters
+                or (json.loads(os.getenv('KITTY_COMMON_OPTS', '{}'))
+                    .get('select_by_word_characters', '@-./_~?&=%+#')))
+
     def _is_word_char(self, c: str) -> bool:
         return (unicodedata.category(c)[0] in 'LN'
-                or c in self.opts.select_by_word_characters)
+                or c in self._select_by_word_characters)
 
     def _is_word_separator(self, c: str) -> bool:
         return (unicodedata.category(c)[0] not in 'LN'
-                and c not in self.opts.select_by_word_characters)
+                and c not in self._select_by_word_characters)
 
     def word_left(self) -> Position:
         if self.point.x > 0:
