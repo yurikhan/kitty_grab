@@ -1,9 +1,17 @@
 from typing import Any, Callable, Iterable, Sequence, Tuple
 
-from kitty.conf.utils import KittensKeyDefinition, KeyFuncWrapper, parse_kittens_key
+from kitty.conf.utils import KittensKeyDefinition, parse_kittens_key
 
 FuncArgsType = Tuple[str, Sequence[Any]]
-func_with_args = KeyFuncWrapper[FuncArgsType]()
+
+try:
+    from kitty.conf.utils import KeyFuncWrapper
+    func_with_args = KeyFuncWrapper[FuncArgsType]()
+except ImportError:
+    from kitty.conf.utils import key_func
+    func_with_args, args_funcs = key_func()
+    func_with_args.args_funcs = args_funcs
+
 
 
 def parse_map(val: str) -> Iterable[KittensKeyDefinition]:
