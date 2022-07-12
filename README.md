@@ -31,7 +31,7 @@ but be aware that version will not be updated.
 
       map Alt+Insert kitten kitty_grab/grab.py
 
-* Restart Kitty.
+* Restart kitty or reload the config (`Ctrl`+`Shift`+`F5` by default, see [kitty.conf](https://sw.kovidgoyal.net/kitty/conf/#shortcut-kitty.Reload-kitty.conf)).
 
 
 # Usage
@@ -87,7 +87,7 @@ or rebind previous/next tab to different keys in `kitty.conf`
     map Ctrl+Page_Up     previous_tab
     map Ctrl+Page_Down   next_tab
 
-(Remember to restart Kitty if you modify `kitty.conf`.)
+(Remember to [reload config](https://sw.kovidgoyal.net/kitty/conf/#shortcut-kitty.Reload-kitty.conf/) if you modify `kitty.conf`.)
 
 
 # Configuration
@@ -99,7 +99,7 @@ and edit to your liking.
 All example entries are commented out.
 Remove the `#` at the start of lines you modify.
 
-You do not need to restart Kitty when you edit `grab.conf`.
+You do not need to reload config when you edit `grab.conf`.
 It will take effect the next time you use the grabber.
 
 
