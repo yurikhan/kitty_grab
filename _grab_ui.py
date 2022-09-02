@@ -619,10 +619,7 @@ class GrabHandler(Handler):
                 self.mark, old_point, self.point))
 
     def move(self, direction: DirectionStr) -> None:
-        if self.mode == 'normal':
-            self._select(direction, NoRegion)
-        else:
-            self._select(direction, self.mode_types[self.mode])
+        self._select(direction, self.mode_types[self.mode])
 
     def select(self, region_type: RegionTypeStr,
                direction: DirectionStr) -> None:

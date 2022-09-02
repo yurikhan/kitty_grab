@@ -105,7 +105,6 @@ map('SelectColumnar word right',     'select_columnar Alt+Ctrl+Right select colu
 
 long_text = '''
 Keys to enable vim-like modal selecting.
-Available modes are "normal", "visual", and "block".
 These keys are not enabled by default.'''
 map('SetMode visual', 'set_mode v                   set_mode visual')
 map('SetMode block',  'set_mode Ctrl+v              set_mode block')
