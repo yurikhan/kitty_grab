@@ -381,6 +381,7 @@ def string_slice(s: str, start_x: ScreenColumn,
 
 DirectionStr = str
 RegionTypeStr = str
+ModeTypeStr = str
 
 
 class GrabHandler(Handler):
@@ -393,6 +394,7 @@ class GrabHandler(Handler):
         self.point = Position(args.x, args.y, args.top_line)
         self.mark = None           # type: Optional[Position]
         self.mark_type = NoRegion  # type: Type[Region]
+        self.mode = 'normal'       # type: ModeTypeStr
         self.result = None         # type: Optional[ResultDict]
         for spec, action in self.opts.map:
             self.add_shortcut(action, spec)
@@ -476,6 +478,11 @@ class GrabHandler(Handler):
                     'columnar': ColumnarRegion
                    }  # type: Dict[RegionTypeStr, Type[Region]]
 
+    mode_types = {'normal': NoRegion,
+                  'visual': StreamRegion,
+                  'block': ColumnarRegion,
+                  }  # type: Dict[ModeTypeStr, Type[Region]]
+
     def _ensure_mark(self, mark_type: Type[Region] = StreamRegion) -> None:
         need_redraw = mark_type is not self.mark_type
         self.mark_type = mark_type
@@ -551,6 +558,9 @@ class GrabHandler(Handler):
                 self.screen_size.rows - 1)
         return Position(x, y, len(self.lines) - y)
 
+    def noop(self) -> Position:
+        return self.point
+
     @property
     def _select_by_word_characters(self) -> str:
         return (self.opts.select_by_word_characters
@@ -609,11 +619,18 @@ class GrabHandler(Handler):
                 self.mark, old_point, self.point))
 
     def move(self, direction: DirectionStr) -> None:
-        self._select(direction, NoRegion)
+        if self.mode == 'normal':
+            self._select(direction, NoRegion)
+        else:
+            self._select(direction, self.mode_types[self.mode])
 
     def select(self, region_type: RegionTypeStr,
                direction: DirectionStr) -> None:
         self._select(direction, self.region_types[region_type])
+
+    def set_mode(self, mode: ModeTypeStr) -> None:
+        self.mode = mode
+        self._select('noop', self.mode_types[mode])
 
     def confirm(self, *args: Any) -> None:
         start, end = self._start_end()

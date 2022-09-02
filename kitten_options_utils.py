@@ -43,6 +43,12 @@ def parse_scroll_direction(direction: str) -> str:
     return result
 
 
+def parse_mode(mode: str) -> str:
+    result = mode.lower()
+    assert result in ['normal', 'visual', 'block']
+    return result
+
+
 @func_with_args('move')
 def move(func: Callable, direction: str) -> Tuple[Callable, str]:
     return func, parse_direction(direction)
@@ -58,3 +64,8 @@ def select(func: Callable, args: str) -> Tuple[Callable, Tuple[str, str]]:
     region_type, direction = args.split(' ', 1)
     return func, (parse_region_type(region_type),
                   parse_direction(direction))
+
+
+@func_with_args("set_mode")
+def set_mode(func: Callable, mode: str) -> Tuple[Callable, str]:
+    return func, parse_mode(mode)

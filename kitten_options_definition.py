@@ -103,6 +103,14 @@ map('SelectColumnar bottom',         'select_columnar Alt+Ctrl+End   select colu
 map('SelectColumnar word left',      'select_columnar Alt+Ctrl+Left  select columnar word left')
 map('SelectColumnar word right',     'select_columnar Alt+Ctrl+Right select columnar word right', long_text=long_text)
 
+long_text = '''
+Keys to enable vim-like modal selecting.
+Available modes are "normal", "visual", and "block".
+These keys are not enabled by default.'''
+map('SetMode visual', 'set_mode v                   set_mode visual')
+map('SetMode block',  'set_mode Ctrl+v              set_mode block')
+map('SetMode normal', 'set_mode Ctrl+LeftBracket    set_mode normal', long_text=long_text)
+
 egr()  # }}}
 
 agr('behavior', 'Behavior')  # {{{
