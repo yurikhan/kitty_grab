@@ -460,6 +460,9 @@ class GrabHandler(Handler):
         self.cmd.set_window_title('Grab – {}'.format(self.args.title))
         self._redraw()
 
+    def perform_default_key_action(self, key_event: KeyEvent) -> bool:
+        return False
+
     def on_key_event(self, key_event: KeyEvent, in_bracketed_paste: bool = False) -> None:
         action = self.shortcut_action(key_event)
         if (key_event.type not in [kk.PRESS, kk.REPEAT]
