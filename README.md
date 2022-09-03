@@ -103,6 +103,12 @@ You do not need to reload config when you edit `grab.conf`.
 It will take effect the next time you use the grabber.
 
 
+# Vim-like Modal Highlighting
+
+Vim-like modal selecting is available.
+Copy the provided `grab-vim.conf.example` file, and copy it to `~/.config/kitty/grab.conf`.
+
+
 # License
 
 GNU Public License version 3 or later.
