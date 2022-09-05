@@ -24,8 +24,8 @@ map h           move left
 map l           move right
 map k           move up
 map j           move down
-map Ctrl+b      move page up
-map Ctrl+f      move page down
+map Ctrl+u      move page up
+map Ctrl+d      move page down
 map 0           move first
 map ^           move first nonwhite
 map $           move last nonwhite
@@ -36,6 +36,8 @@ map w           move word right
 
 #: Move the cursor around the screen.
 #: This will scroll the buffer if needed and possible.
+#: Note that due to https://github.com/kovidgoyal/kitty/issues/5469, the ctrl+d
+#: shortcut will only work with kitty >= 0.26.2
 
 map Ctrl+y scroll up
 map Ctrl+e scroll down
