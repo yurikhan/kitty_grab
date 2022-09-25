@@ -14,12 +14,18 @@ from kitten_options_types import Options, defaults
 from kitten_options_parse import create_result_dict, merge_result_dicts, parse_conf_item
 from kitty.conf.utils import load_config as _load_config, parse_config_base, resolve_config
 from kitty.constants import config_dir
-from kitty.fast_data_types import set_clipboard_string, truncate_point_for_length, wcswidth
+from kitty.fast_data_types import truncate_point_for_length, wcswidth
 import kitty.key_encoding as kk
 from kitty.key_encoding import KeyEvent
 from kitty.rgb import color_as_sgr
 from kittens.tui.handler import Handler
 from kittens.tui.loop import Loop
+
+
+try:
+    from kitty.clipboard import set_clipboard_string
+except ImportError:
+    from kitty.fast_data_types import set_clipboard_string
 
 
 if TYPE_CHECKING:
