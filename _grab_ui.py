@@ -373,7 +373,9 @@ def load_config(*paths: str, overrides: Optional[Iterable[str]] = None) -> Optio
 
 
 def unstyled(s: str) -> str:
-    return re.sub(r'\x1b\[[0-9;:]*m', '', s)
+    s = re.sub(r'\x1b\[[0-9;:]*m', '', s)
+    s = re.sub(r'\x1b\](?:[^\x07\x1b]+|\x1b[^\\])*(?:\x1b\\|\x07)', '', s)
+    return s
 
 
 def string_slice(s: str, start_x: ScreenColumn,
