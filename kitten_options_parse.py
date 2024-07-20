@@ -7,6 +7,9 @@ from kitty.conf.utils import merge_dicts, to_color
 
 class Parser:
 
+    def cursor(self, val: str, ans: typing.Dict[str, typing.Any]) -> None:
+        ans['cursor'] = to_color(val)
+
     def select_by_word_characters(self, val: str, ans: typing.Dict[str, typing.Any]) -> None:
         ans['select_by_word_characters'] = str(val)
 

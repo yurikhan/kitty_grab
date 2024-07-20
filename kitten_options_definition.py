@@ -26,6 +26,11 @@ opt('selection_background', '#5294E2',
     long_text='''
 Background color for selected text while grabbing.''')
 
+opt('cursor', '#ad7fa8',
+    option_type='to_color',
+    long_text='''
+Cursor color while grabbing.''')
+
 egr()  # }}}
 
 # shortcuts {{{

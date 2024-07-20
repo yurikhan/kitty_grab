@@ -7,6 +7,10 @@
 
 #: Colors for selected text while grabbing.
 
+# cursor #ad7fa8
+
+#: Cursor color while grabbing.
+
 #: }}}
 
 #: Key shortcuts {{{

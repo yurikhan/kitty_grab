@@ -10,6 +10,7 @@ import kitty.types
 
 
 option_names = (  # {{{
+ 'cursor',
  'map',
  'select_by_word_characters',
  'selection_background',
@@ -17,6 +18,7 @@ option_names = (  # {{{
 
 
 class Options:
+    cursor: Color = Color(173, 127, 168)
     select_by_word_characters: str = ''
     selection_background: Color = Color(82, 148, 226)
     selection_foreground: Color = Color(255, 255, 255)
