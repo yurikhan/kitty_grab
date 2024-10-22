@@ -689,7 +689,7 @@ type=int
         handler = GrabHandler(args, opts, lines)
         loop = Loop()
         loop.loop(handler)
-        if 'copy' in handler.result:
+        if handler.result and 'copy' in handler.result:
             sys.stdout.buffer.write(b''.join((b'\x1b]52;c;',
                                               b64encode(handler.result['copy'].encode('utf-8')),
                                               b'\x1b\\')))
