@@ -2,7 +2,7 @@ import os
 from typing import Any, Dict, List, Sequence
 
 from kittens.tui.handler import result_handler
-from kitty.typing import BossType
+from kitty.typing_compat import BossType
 
 import _grab_ui
 
