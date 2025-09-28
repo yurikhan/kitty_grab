@@ -405,6 +405,14 @@ class GrabHandler(Handler):
         self.mark_type = NoRegion  # type: Type[Region]
         self.mode = 'normal'       # type: ModeTypeStr
         self.result = None         # type: Optional[ResultDict]
+
+        # Operating System Command (OSC); command number 52
+        # c — clipboard
+        # p — primary
+        # s — secondary
+        self.copy_to = {'primary': b'p', 'secondary': b's'}.get(args.copy_to, b'c')
+
+
         for spec, action in self.opts.map:
             self.add_shortcut(action, spec)
 
@@ -656,8 +664,15 @@ class GrabHandler(Handler):
 
 
 def main(args: List[str]) -> Optional['ResultDict']:
+
     def ospec() -> str:
         return '''
+--copy-to
+dest=copy_to
+type=str
+Copy to: 'clipboard' or 'primary'/selection or 'secondary' buffer
+
+
 --cursor-x
 dest=x
 type=int
@@ -690,7 +705,7 @@ type=int
         loop = Loop()
         loop.loop(handler)
         if loop.return_code == 0 and 'copy' in handler.result:
-            sys.stdout.buffer.write(b''.join((b'\x1b]52;c;',
+            sys.stdout.buffer.write(b''.join((b'\x1b]52;', handler.copy_to, b';',
                                               b64encode(handler.result['copy'].encode('utf-8')),
                                               b'\x1b\\')))
         return {}
