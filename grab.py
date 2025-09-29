@@ -30,6 +30,7 @@ def handle_result(args: List[str], data: Dict[str, Any], target_window_id: int, 
     n_lines = content.count('\n')
     top_line = (n_lines - (window.screen.lines - 1) - window.screen.scrolled_by)
     boss._run_kitten(_grab_ui.__file__, args=[
+        *args[1:],
         '--title={}'.format(window.title),
         '--cursor-x={}'.format(window.screen.cursor.x),
         '--cursor-y={}'.format(window.screen.cursor.y),
