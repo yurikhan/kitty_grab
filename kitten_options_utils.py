@@ -45,7 +45,7 @@ def parse_scroll_direction(direction: str) -> str:
 
 def parse_mode(mode: str) -> str:
     result = mode.lower()
-    assert result in ['normal', 'visual', 'block']
+    assert result in ['normal', 'line', 'visual', 'block']
     return result
 
 
