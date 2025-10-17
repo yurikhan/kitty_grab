@@ -675,14 +675,16 @@ class GrabHandler(Handler):
 
     def confirm(self, *args: Any) -> None:
         start, end = self._start_end()
+        # '=65h' used as placeholder (emulate line-wrapping)
         self.result = {'copy': '\n'.join(
-            line_slice
-            for line in range(start.line, end.line + 1)
-            for plain in [unstyled(self.lines[line - 1])]
-            for start_x, end_x in [self.mark_type.selection_in_line(
-                line, start, end, len(plain))]
-            if start_x is not None and end_x is not None
-            for line_slice, _half in [string_slice(plain, start_x, end_x)])}
+                line_slice
+                for line in range(start.line, end.line + 1)
+                for plain in [unstyled(self.lines[line - 1])]
+                for start_x, end_x in [self.mark_type.selection_in_line(
+                    line, start, end, len(plain))]
+                if start_x is not None and end_x is not None
+                for line_slice, _half in [string_slice(plain, start_x, end_x)]
+            ).replace('\x1b[=65h\n', '').replace('\x1b[=65h', '')}
         self.quit_loop(0)
 
 
