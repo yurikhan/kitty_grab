@@ -110,6 +110,7 @@ map('SelectColumnar word right',     'select_columnar Alt+Ctrl+Right select colu
 
 long_text = '''
 Keys to enable vim-like modal selecting.'''
+map('SetMode visual', 'set_mode V                   set_mode line')
 map('SetMode visual', 'set_mode v                   set_mode visual')
 map('SetMode block',  'set_mode Ctrl+v              set_mode block')
 map('SetMode normal', 'set_mode Ctrl+LeftBracket    set_mode normal', long_text=long_text)
