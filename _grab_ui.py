@@ -316,7 +316,7 @@ class LineRegion(MarkedRegion):
     def selection_in_line(
             current_line: AbsoluteLine, start: Position, end: Position,
             maxx: ScreenColumn) -> SelectionInLine:
-        if StreamRegion.line_outside_region(current_line, start, end):
+        if LineRegion.line_outside_region(current_line, start, end):
             return None, None
         return (0, maxx)
 
@@ -516,15 +516,15 @@ class GrabHandler(Handler):
     def quit(self, *args: Any) -> None:
         self.quit_loop(1)
 
-    region_types = {'stream':   StreamRegion,
-                    'line':     LineRegion,
+    region_types = {'stream': StreamRegion,
+                    'line': LineRegion,
                     'columnar': ColumnarRegion
                    }  # type: Dict[RegionTypeStr, Type[Region]]
 
     mode_types = {'normal': NoRegion,
                   'visual': StreamRegion,
-                  'line':   LineRegion,
-                  'block':  ColumnarRegion,
+                  'line': LineRegion,
+                  'block': ColumnarRegion,
                   }  # type: Dict[ModeTypeStr, Type[Region]]
 
     def _ensure_mark(self, mark_type: Type[Region] = StreamRegion) -> None:
