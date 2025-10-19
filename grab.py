@@ -24,9 +24,12 @@ def handle_result(args: List[str], data: Dict[str, Any], target_window_id: int, 
     tab = window.tabref()
     if tab is None:
         return
+
     content = window.as_text(as_ansi=True, add_history=True,
                              add_wrap_markers=True)
-    content = content.replace('\r\n', '\n').replace('\r', '\n')
+    # convert all newlines to UNIX-style, but keep new-line wrap markers
+    # '=65h' used as placeholder (looks like unused CSI)
+    content = content.replace('\r\n', '\n').replace('\r\x1b[m', '\x1b[=65h\n').replace('\r', '\n')
     n_lines = content.count('\n')
     top_line = (n_lines - (window.screen.lines - 1) - window.screen.scrolled_by)
     boss._run_kitten(_grab_ui.__file__, args=[

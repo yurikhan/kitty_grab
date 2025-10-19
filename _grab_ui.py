@@ -304,6 +304,27 @@ class StreamRegion(MarkedRegion):
                        point: Position) -> Set[AbsoluteLine]:
         return _span(old_point.line, point.line)
 
+class LineRegion(MarkedRegion):
+    name = 'line'
+
+    @staticmethod
+    def line_inside_region(current_line: AbsoluteLine,
+                           start: Position, end: Position) -> bool:
+        return start.line < current_line < end.line
+
+    @staticmethod
+    def selection_in_line(
+            current_line: AbsoluteLine, start: Position, end: Position,
+            maxx: ScreenColumn) -> SelectionInLine:
+        if LineRegion.line_outside_region(current_line, start, end):
+            return None, None
+        return (0, maxx)
+
+    @staticmethod
+    def lines_affected(mark: Optional[Position], old_point: Position,
+                       point: Position) -> Set[AbsoluteLine]:
+        return _span(old_point.line, point.line)
+
 
 class ColumnarRegion(MarkedRegion):
     name = 'columnar'
@@ -496,11 +517,13 @@ class GrabHandler(Handler):
         self.quit_loop(1)
 
     region_types = {'stream': StreamRegion,
+                    'line': LineRegion,
                     'columnar': ColumnarRegion
                    }  # type: Dict[RegionTypeStr, Type[Region]]
 
     mode_types = {'normal': NoRegion,
                   'visual': StreamRegion,
+                  'line': LineRegion,
                   'block': ColumnarRegion,
                   }  # type: Dict[ModeTypeStr, Type[Region]]
 
@@ -652,14 +675,16 @@ class GrabHandler(Handler):
 
     def confirm(self, *args: Any) -> None:
         start, end = self._start_end()
+        # '=65h' used as placeholder (emulate line-wrapping)
         self.result = {'copy': '\n'.join(
-            line_slice
-            for line in range(start.line, end.line + 1)
-            for plain in [unstyled(self.lines[line - 1])]
-            for start_x, end_x in [self.mark_type.selection_in_line(
-                line, start, end, len(plain))]
-            if start_x is not None and end_x is not None
-            for line_slice, _half in [string_slice(plain, start_x, end_x)])}
+                line_slice
+                for line in range(start.line, end.line + 1)
+                for plain in [unstyled(self.lines[line - 1])]
+                for start_x, end_x in [self.mark_type.selection_in_line(
+                    line, start, end, len(plain))]
+                if start_x is not None and end_x is not None
+                for line_slice, _half in [string_slice(plain, start_x, end_x)]
+            ).replace('\x1b[=65h\n', '').replace('\x1b[=65h', '')}
         self.quit_loop(0)
 
 
