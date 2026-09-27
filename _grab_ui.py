@@ -600,13 +600,13 @@ class GrabHandler(Handler):
         if self.point.x > 0:
             line = unstyled(self.lines[self.point.line - 1])
             pos = truncate_point_for_length(line, self.point.x)
-            if pos > 0:
-                pred = (self._is_word_char if self._is_word_char(line[pos - 1])
-                        else self._is_word_separator)
-                new_pos = pos - len(''.join(takewhile(pred, reversed(line[:pos]))))
-                return Position(wcswidth(line[:new_pos]),
-                                self.point.y, self.point.top_line)
-            return Position(0, self.point.y, self.point.top_line)
+            if pos == 0:
+                return Position(0, self.point.y, self.point.top_line)
+            pred = (self._is_word_char if self._is_word_char(line[pos - 1])
+                    else self._is_word_separator)
+            new_pos = pos - len(''.join(takewhile(pred, reversed(line[:pos]))))
+            return Position(wcswidth(line[:new_pos]),
+                            self.point.y, self.point.top_line)
         if self.point.y > 0:
             return Position(wcswidth(unstyled(self.lines[self.point.line - 2])),
                             self.point.y - 1, self.point.top_line)
