@@ -49,6 +49,7 @@ map Ctrl+e scroll down
 #: Scroll the buffer, if possible.
 #: Cursor stays in the same position relative to the screen.
 
+map V                 set_mode line
 map v                 set_mode visual
 map Ctrl+v            set_mode block
 map Ctrl+Left_Bracket set_mode normal
