@@ -934,6 +934,12 @@ class GrabHandler(Handler):
         self.result = {'copy': unstyled(self.lines[self.point.line - 1])}
         self.quit_loop(0)
 
+    def yank_to_end(self) -> None:
+        line = unstyled(self.lines[self.point.line - 1])
+        col = truncate_point_for_length(line, self.point.x)
+        self.result = {'copy': line[col:]}
+        self.quit_loop(0)
+
     def _move_to(self, new_point: Position, mark_type: Type[Region]) -> None:
         self._ensure_mark(mark_type)
         old_point = self.point

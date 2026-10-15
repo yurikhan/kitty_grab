@@ -114,8 +114,9 @@ line-wise and block-wise visual selection, and familiar word motions:
 to a character on the current line (`;`/`,` repeat that jump forward/
 backward), `H`/`M`/`L` to jump to the top/middle/bottom of the screen,
 `%` to jump to a matching bracket, `/`/`?` to search the whole buffer
-(`n`/`N` repeat the search forward/backward), and `yy`/`Y` to yank the
-current line (or the active selection, if any).
+(`n`/`N` repeat the search forward/backward), `yy` to yank the
+current line (or the active selection, if any), and `Y` to yank from the
+cursor to the end of the line.
 
 
 # License

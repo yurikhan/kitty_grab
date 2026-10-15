@@ -21,10 +21,11 @@
 
 # map Enter confirm
 map y yank
-map Y yank_line
+map Y yank_to_end
 
 #: Copy the selected region to clipboard and exit.
-#: Press y twice (yy), or Y, to yank the current line.
+#: Press y twice (yy) to yank the current line, or Y to yank from the
+#: cursor to the end of the line.
 #: Press y once while a selection is active to yank the selection.
 
 map h           move left
